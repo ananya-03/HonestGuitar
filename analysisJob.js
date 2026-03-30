@@ -138,9 +138,21 @@ function createJobStream(job) {
   };
 }
 
-export async function runAnalysisJob(jobId) {
+async function loadJobForRun(jobId, initialJob) {
+  if (initialJob?.id === jobId) return structuredClone(initialJob);
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const job = await readJob(jobId);
+    if (job) return job;
+    await new Promise(resolve => setTimeout(resolve, Math.min(250 * (attempt + 1), 1500)));
+  }
+
+  return null;
+}
+
+export async function runAnalysisJob(jobId, initialJob = null) {
   const mediaProviderLabel = getMediaAnalysisProviderLabel();
-  let job = await readJob(jobId);
+  let job = await loadJobForRun(jobId, initialJob);
   if (!job || job.status !== 'queued') return;
 
   job.status = 'running';

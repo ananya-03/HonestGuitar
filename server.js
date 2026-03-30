@@ -89,7 +89,7 @@ app.post('/api/analyse', upload.single('video'), async (req, res) => {
       } : null
     });
 
-    const backgroundTask = runAnalysisJob(job.id).catch(error => {
+    const backgroundTask = runAnalysisJob(job.id, job).catch(error => {
       console.error(`Background analysis job ${job.id} failed:`, error);
     });
 

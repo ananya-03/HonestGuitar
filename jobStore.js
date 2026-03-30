@@ -41,6 +41,10 @@ function videoPath(jobId, mimeType) {
   return `jobs/${jobId}/input.${extensionFromMimeType(mimeType)}`;
 }
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function ensureLocalDir() {
   await mkdir(LOCAL_JOB_DIR, { recursive: true });
 }
@@ -55,15 +59,30 @@ async function writeBlobJson(pathname, value) {
 }
 
 async function readBlobJson(pathname) {
-  try {
-    const metadata = await head(pathname);
-    const response = await fetch(metadata.downloadUrl);
-    if (!response.ok) return null;
-    const text = await response.text();
-    return JSON.parse(text);
-  } catch {
-    return null;
+  let lastError = null;
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    try {
+      const metadata = await head(pathname);
+      const response = await fetch(metadata.downloadUrl, { cache: 'no-store' });
+      if (!response.ok) {
+        lastError = new Error(`Blob fetch failed with ${response.status}`);
+      } else {
+        const text = await response.text();
+        return JSON.parse(text);
+      }
+    } catch (error) {
+      lastError = error;
+    }
+
+    await sleep(Math.min(250 * (attempt + 1), 1500));
   }
+
+  if (lastError) {
+    console.warn(`Blob state read failed for ${pathname}:`, lastError.message || lastError);
+  }
+
+  return null;
 }
 
 export function getJobStoreMode() {
@@ -172,11 +191,29 @@ export async function readJobVideoBuffer(job) {
   if (!job?.video?.pathname) return null;
 
   if (useBlobStore) {
-    const metadata = await head(job.video.pathname);
-    const response = await fetch(metadata.downloadUrl);
-    if (!response.ok) return null;
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    let lastError = null;
+
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      try {
+        const metadata = await head(job.video.pathname);
+        const response = await fetch(metadata.downloadUrl, { cache: 'no-store' });
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          return Buffer.from(arrayBuffer);
+        }
+        lastError = new Error(`Blob fetch failed with ${response.status}`);
+      } catch (error) {
+        lastError = error;
+      }
+
+      await sleep(Math.min(250 * (attempt + 1), 1500));
+    }
+
+    if (lastError) {
+      console.warn(`Blob video read failed for ${job.video.pathname}:`, lastError.message || lastError);
+    }
+
+    return null;
   }
 
   try {
