@@ -8,12 +8,22 @@
 
 import { GoogleGenAI, createPartFromUri, createUserContent } from '@google/genai';
 import ffmpeg from 'fluent-ffmpeg';
+import ffmpegPath from 'ffmpeg-static';
+import ffprobeStatic from 'ffprobe-static';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { mkdir, readFile, rm, writeFile } from 'fs/promises';
 import { randomBytes } from 'crypto';
 
 const GEMINI_MEDIA_MODEL = 'gemini-3-flash-preview';
+
+if (ffmpegPath) {
+  ffmpeg.setFfmpegPath(ffmpegPath);
+}
+
+if (ffprobeStatic?.path) {
+  ffmpeg.setFfprobePath(ffprobeStatic.path);
+}
 
 const VIDEO_SCHEMA = {
   type: 'object',
@@ -358,6 +368,8 @@ export async function analyseVideo(videoBuffer, mimeType = 'video/mp4', knownCho
     } catch {
       previewFrames = [];
     }
+    const audioPreviewBuffer = await readFile(temp.audioPath);
+    const audioPreviewUrl = `data:audio/mpeg;base64,${audioPreviewBuffer.toString('base64')}`;
     uploadedAudio = await uploadAudioFile(ai, temp.audioPath);
 
     const [videoResult, audioResult] = await Promise.all([
@@ -395,6 +407,7 @@ export async function analyseVideo(videoBuffer, mimeType = 'video/mp4', knownCho
         }))
         .filter(item => item.wrong || item.correct),
       previewFrames: previewFrames.map(frame => frame.dataUrl),
+      audioPreviewUrl,
       soundNote: audioResult.soundQualitySummary || audioResult.toneNotes || '',
       soundScore: audioResult.soundScore ?? null,
       buzzRisk: audioResult.buzzRisk || 'unknown',

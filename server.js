@@ -19,10 +19,13 @@ import { analyseVideo } from './videoAnalyser.js';
 import { scrapeTabsAndChords, scrapeSongForums, scrapeGearForums } from './webAgent.js';
 import { synthesiseRoadmap, synthesiseSongTips } from './synthesiser.js';
 
-const app = express();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 100 * 1024 * 1024 } }); // 100MB
 const ROOT_DIR = dirname(fileURLToPath(import.meta.url));
-const TINYFISH_MASCOT_PATH = '/Users/ananyasingh/Desktop/Screenshot 2026-03-28 at 2.26.36 PM.png';
+const PUBLIC_DIR = join(ROOT_DIR, 'public');
+const isVercelDeployment = Boolean(process.env.VERCEL);
+const uploadLimitMb = Math.max(1, Number(process.env.VIDEO_UPLOAD_LIMIT_MB || (isVercelDeployment ? 4 : 100)));
+const uploadLimitBytes = Math.floor(uploadLimitMb * 1024 * 1024);
+const app = express();
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: uploadLimitBytes } });
 const tinyFishConfigured = Boolean(process.env.TINYFISH_API_KEY || process.env.TINY_FISH_API_KEY);
 const geminiConfigured = Boolean(process.env.GEMINI_API_KEY);
 const spotifyConfigured = Boolean(process.env.SPOTIFY_CLIENT_ID);
@@ -133,10 +136,8 @@ function createTinyFishLogBridge(stream, agent, label) {
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
+app.use('/assets', express.static(join(PUBLIC_DIR, 'assets')));
 app.get('/', (_, res) => res.sendFile(join(ROOT_DIR, 'honestguitar.html')));
-app.get('/assets/hero-image.png', (_, res) => res.sendFile(join(ROOT_DIR, 'Gemini_Generated_Image_mhahmtmhahmtmhah.png')));
-app.get('/assets/hero-video.mp4', (_, res) => res.sendFile(join(ROOT_DIR, 'playing_chords_202603281423.mp4')));
-app.get('/assets/tinyfish-mascot.png', (_, res) => res.sendFile(TINYFISH_MASCOT_PATH));
 
 // ─── Health and config ───────────────────────────────────────────────────────
 app.get('/api/health', (_, res) => res.json({ status: 'ok', timestamp: new Date().toISOString() }));
@@ -146,45 +147,40 @@ app.get('/api/config', (_, res) => {
     spotifyClientId: process.env.SPOTIFY_CLIENT_ID || null,
     geminiConfigured,
     spotifyConfigured,
-    tinyFishConfigured
+    tinyFishConfigured,
+    uploadLimitMb,
+    deploymentTarget: isVercelDeployment ? 'vercel' : 'local'
   });
 });
 
-// ─── SSE helper (streams agent logs to the browser in real time) ────────────
-function createSSEStream(res) {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
+// ─── Run collector (POST/JSON only for demo mode) ────────────────────────────
+function createRunCollector() {
+  const logs = [];
+  let progress = 0;
 
   return {
     log(agent, message) {
-      res.write(`data: ${JSON.stringify({ type: 'log', agent, message, ts: new Date().toISOString() })}\n\n`);
+      logs.push({ type: 'log', agent, message, ts: new Date().toISOString() });
     },
     progress(pct) {
-      res.write(`data: ${JSON.stringify({ type: 'progress', pct })}\n\n`);
+      progress = pct;
     },
-    result(data) {
-      res.write(`data: ${JSON.stringify({ type: 'result', data })}\n\n`);
-      res.end();
-    },
-    error(msg) {
-      res.write(`data: ${JSON.stringify({ type: 'error', message: msg })}\n\n`);
-      res.end();
+    snapshot() {
+      return { logs, progress };
     }
   };
 }
 
 // ─── Main pipeline ───────────────────────────────────────────────────────────
 app.post('/api/analyse', upload.single('video'), async (req, res) => {
-  const stream = createSSEStream(res);
+  const stream = createRunCollector();
 
   try {
     let profile;
     try {
       profile = typeof req.body.profile === 'string' ? JSON.parse(req.body.profile) : req.body;
     } catch {
-      return stream.error('Invalid profile JSON in request body.');
+      return res.status(400).json({ ok: false, error: 'Invalid profile JSON in request body.' });
     }
 
     const {
@@ -334,11 +330,18 @@ app.post('/api/analyse', upload.single('video'), async (req, res) => {
 
     stream.progress(100);
     stream.log('synthesiser', `✓ Roadmap ready — ${roadmap.songs.length} songs, ${roadmap.nextChords.length} new chords to learn`);
-
-    stream.result(roadmap);
+    return res.json({
+      ok: true,
+      data: roadmap,
+      ...stream.snapshot()
+    });
   } catch (err) {
     console.error('Pipeline error:', err);
-    stream.error(err.message || 'Unexpected server error');
+    return res.status(500).json({
+      ok: false,
+      error: err.message || 'Unexpected server error',
+      ...stream.snapshot()
+    });
   }
 });
 
@@ -359,11 +362,44 @@ app.post('/api/scrape-song', express.json(), async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`\n🎸 HonestGuitar server running at http://localhost:${PORT}`);
-  console.log(`   TinyFish key:  ${tinyFishConfigured ? '✓ set' : '✗ missing (set TINYFISH_API_KEY or TINY_FISH_API_KEY)'}`);
-  console.log(`   OpenAI key:    ${process.env.OPENAI_API_KEY ? '✓ set' : '✗ missing (set OPENAI_API_KEY)'}`);
-  console.log(`   Gemini key:    ${geminiConfigured ? '✓ set' : '✗ missing (set GEMINI_API_KEY)'}`);
-  console.log(`   Spotify client:${spotifyConfigured ? ' ✓ set' : ' ✗ missing (set SPOTIFY_CLIENT_ID)'}\n`);
+app.use((err, _req, res, next) => {
+  if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(413).json({
+      ok: false,
+      error: `Video must be ${uploadLimitMb}MB or smaller on this deployment.`
+    });
+  }
+
+  if (err?.type === 'entity.too.large') {
+    return res.status(413).json({
+      ok: false,
+      error: `Request payload exceeded the ${uploadLimitMb}MB upload limit.`
+    });
+  }
+
+  return next(err);
 });
+
+app.use((err, _req, res, next) => {
+  if (res.headersSent) return next(err);
+  console.error('Unhandled express error:', err);
+  return res.status(err?.status || 500).json({
+    ok: false,
+    error: err?.message || 'Unexpected server error'
+  });
+});
+
+export default app;
+
+if (!isVercelDeployment) {
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`\n🎸 HonestGuitar server running at http://localhost:${PORT}`);
+    console.log(`   Deployment:   local`);
+    console.log(`   Upload limit: ${uploadLimitMb}MB`);
+    console.log(`   TinyFish key:  ${tinyFishConfigured ? '✓ set' : '✗ missing (set TINYFISH_API_KEY or TINY_FISH_API_KEY)'}`);
+    console.log(`   OpenAI key:    ${process.env.OPENAI_API_KEY ? '✓ set' : '✗ missing (set OPENAI_API_KEY)'}`);
+    console.log(`   Gemini key:    ${geminiConfigured ? '✓ set' : '✗ missing (set GEMINI_API_KEY)'}`);
+    console.log(`   Spotify client:${spotifyConfigured ? ' ✓ set' : ' ✗ missing (set SPOTIFY_CLIENT_ID)'}\n`);
+  });
+}

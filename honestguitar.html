@@ -253,6 +253,15 @@ input[type="text"]::placeholder{color:var(--text3);}
 .vf-score{font-family:var(--mono);font-size:18px;font-weight:500;color:var(--accent);}
 .vf-tip{margin-top:14px;background:rgba(232,131,74,0.07);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text2);line-height:1.6;}
 .vf-tip strong{color:var(--accent);font-weight:500;}
+.feedback-video-wrap{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(240px,0.92fr);gap:14px;margin-top:18px;}
+.feedback-video-player{position:relative;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);background:rgba(5,5,5,0.82);min-height:300px;box-shadow:0 24px 38px rgba(0,0,0,0.28);}
+.feedback-video-player video{display:block;width:100%;height:100%;min-height:300px;object-fit:cover;background:#000;}
+.feedback-video-badge{position:absolute;left:14px;top:14px;font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;padding:6px 10px;border-radius:999px;background:rgba(8,8,8,0.68);border:1px solid rgba(255,255,255,0.08);color:var(--text);}
+.feedback-video-side{display:flex;}
+.feedback-video-card{width:100%;display:flex;flex-direction:column;justify-content:space-between;gap:14px;background:rgba(14,14,14,0.68);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:18px;backdrop-filter:blur(16px);}
+.feedback-video-note{font-size:13px;color:var(--text2);line-height:1.7;}
+.feedback-video-tags{display:flex;flex-wrap:wrap;gap:8px;}
+.feedback-video-tag{font-family:var(--mono);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;color:var(--text);background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:999px;padding:6px 10px;}
 .clip-loop-wrap{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(220px,0.8fr);gap:14px;margin-top:18px;}
 .clip-loop-main{position:relative;min-height:280px;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,0.08);background:rgba(5,5,5,0.74);box-shadow:0 24px 38px rgba(0,0,0,0.28);}
 .clip-loop-main img{display:block;width:100%;height:100%;min-height:280px;object-fit:cover;animation:framePulse 1.6s ease-in-out infinite;}
@@ -284,10 +293,40 @@ input[type="text"]::placeholder{color:var(--text3);}
 .frame-feedback-row:last-child{margin-bottom:0;}
 .frame-feedback-row.bad{background:rgba(232,93,93,0.11);border:1px solid rgba(232,93,93,0.22);color:#ffb0b0;}
 .frame-feedback-row.good{background:rgba(92,201,139,0.11);border:1px solid rgba(92,201,139,0.2);color:#b7ffd4;}
+.feedback-feed{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(280px,0.8fr);gap:14px;margin-top:16px;}
+.feedback-feed-main,.feedback-feed-audio{background:rgba(14,14,14,0.72);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:18px;backdrop-filter:blur(16px);}
+.feedback-feed-kicker{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;}
+.feedback-feed-title{font-family:var(--display);font-size:18px;font-weight:700;letter-spacing:-0.02em;margin-bottom:8px;}
+.feedback-feed-sub{font-size:13px;color:var(--text2);line-height:1.7;}
+.feedback-feed-list{display:grid;gap:12px;margin-top:14px;}
+.feedback-feed-card{display:grid;grid-template-columns:128px minmax(0,1fr);gap:14px;background:rgba(8,8,8,0.42);border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:12px;}
+.feedback-feed-thumb{position:relative;min-height:124px;border-radius:14px;overflow:hidden;background:rgba(8,8,8,0.84);}
+.feedback-feed-thumb img{display:block;width:100%;height:100%;object-fit:cover;}
+.feedback-feed-frame{position:absolute;left:8px;top:8px;font-family:var(--mono);font-size:10px;letter-spacing:0.06em;text-transform:uppercase;padding:5px 8px;border-radius:999px;background:rgba(8,8,8,0.72);border:1px solid rgba(255,255,255,0.08);}
+.feedback-feed-copy{display:flex;flex-direction:column;gap:8px;}
+.feedback-feed-focus{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:0.1em;text-transform:uppercase;}
+.feedback-feed-body{display:grid;gap:8px;}
+.feedback-feed-row{border-radius:12px;padding:11px 12px;font-size:13px;line-height:1.6;}
+.feedback-feed-row.bad{background:rgba(232,93,93,0.11);border:1px solid rgba(232,93,93,0.22);color:#ffb0b0;}
+.feedback-feed-row.good{background:rgba(92,201,139,0.11);border:1px solid rgba(92,201,139,0.2);color:#b7ffd4;}
+.feedback-feed-label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;color:rgba(240,237,232,0.8);}
+.feedback-feed-audio{display:flex;flex-direction:column;gap:14px;}
+.feedback-audio-player{width:100%;height:44px;filter:saturate(0.92);}
+.feedback-audio-list{display:grid;gap:10px;}
+.feedback-audio-item{background:rgba(8,8,8,0.42);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:12px 13px;}
+.feedback-audio-label{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;}
+.feedback-audio-value{font-size:13px;color:var(--text2);line-height:1.65;}
+.feedback-audio-score{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;color:var(--text);background:rgba(91,156,246,0.1);border:1px solid rgba(91,156,246,0.18);padding:7px 10px;border-radius:999px;width:max-content;}
+.feedback-audio-score strong{font-size:13px;color:var(--blue);font-weight:500;}
 @keyframes framePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.015)}}
 @media(max-width:680px){
+  .feedback-video-wrap{grid-template-columns:1fr;}
+  .feedback-video-player,.feedback-video-player video{min-height:220px;}
   .clip-loop-wrap{grid-template-columns:1fr;}
   .clip-loop-main,.clip-loop-main img{min-height:220px;}
+  .feedback-feed{grid-template-columns:1fr;}
+  .feedback-feed-card{grid-template-columns:1fr;}
+  .feedback-feed-thumb{min-height:190px;}
 }
 
 /* Stats bar */
@@ -438,7 +477,7 @@ input[type="text"]::placeholder{color:var(--text3);}
                   ■ Stop
                 </button>
               </div>
-              <div class="record-hint">Record 15–30 seconds of you strumming — any chord or song you're trying.<br/>Gemini will analyse your technique, rhythm, buzz risk, and sound quality.</div>
+              <div class="record-hint" id="record-hint">Record 15–30 seconds of you strumming — any chord or song you're trying.<br/>Gemini will analyse your technique, rhythm, buzz risk, and sound quality.</div>
             </div>
             <!-- Upload view -->
             <div id="upload-view">
@@ -446,7 +485,7 @@ input[type="text"]::placeholder{color:var(--text3);}
                 <input type="file" id="video-file" accept="video/*" onchange="handleVideoUpload(this)"/>
                 <div class="upload-icon">🎸</div>
                 <div class="upload-label">Drop your video here or click to browse</div>
-                <div class="upload-sub">MP4, MOV, WebM · max 100MB</div>
+                <div class="upload-sub" id="video-upload-sub">MP4, MOV, WebM · max 100MB</div>
               </div>
             </div>
             <!-- Video ready state -->
@@ -669,6 +708,9 @@ input[type="text"]::placeholder{color:var(--text3);}
 const SPOTIFY_STORAGE_KEY = 'honestguitar.spotify';
 const SPOTIFY_VERIFIER_KEY = 'honestguitar.spotify.verifier';
 const SPOTIFY_STATE_KEY = 'honestguitar.spotify.state';
+const SPOTIFY_DRAFT_STORAGE_KEY = 'honestguitar.spotify.redirect-draft';
+const SPOTIFY_DRAFT_DB_NAME = 'honestguitar-draft-db';
+const SPOTIFY_DRAFT_STORE_NAME = 'drafts';
 const API_BASE_CANDIDATES = [
   window.location.origin,
   'http://localhost:3001',
@@ -687,12 +729,14 @@ const state = {
   videoBlob: null,
   results: null,
   backendBase: null,
-  config: { spotifyClientId: null, spotifyConfigured: false, geminiConfigured: false },
+  config: { spotifyClientId: null, spotifyConfigured: false, geminiConfigured: false, uploadLimitMb: 100, deploymentTarget: 'local' },
   spotify: { connected: false, topArtists: [], topTracks: [], session: null },
   frameLoopTimer: null,
   frameLoopIndex: 0,
   localPreviewFrames: [],
-  localPreviewPromise: null
+  localPreviewPromise: null,
+  uploadedMediaUrl: null,
+  agentDemoTimers: []
 };
 
 // ─── SCREEN NAV ───────────────────────────────────────────────────────────────
@@ -702,6 +746,217 @@ function showScreen(id) {
   window.scrollTo(0,0);
 }
 function setProgress(p) { document.getElementById('progress-fill').style.width = p+'%'; }
+
+function revokeUploadedMediaUrl() {
+  if (state.uploadedMediaUrl) {
+    URL.revokeObjectURL(state.uploadedMediaUrl);
+    state.uploadedMediaUrl = null;
+  }
+}
+
+function getUploadedMediaUrl() {
+  const source = state.videoBlob || state.videoFile;
+  if (!source) return null;
+  if (!state.uploadedMediaUrl) {
+    state.uploadedMediaUrl = URL.createObjectURL(source);
+  }
+  return state.uploadedMediaUrl;
+}
+
+function openDraftDatabase() {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) {
+      resolve(null);
+      return;
+    }
+
+    const request = window.indexedDB.open(SPOTIFY_DRAFT_DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(SPOTIFY_DRAFT_STORE_NAME)) {
+        db.createObjectStore(SPOTIFY_DRAFT_STORE_NAME);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('Could not open draft database.'));
+  });
+}
+
+function resolveIdbRequest(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('IndexedDB request failed.'));
+  });
+}
+
+function waitForTransaction(transaction) {
+  return new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onabort = () => reject(transaction.error || new Error('IndexedDB transaction aborted.'));
+    transaction.onerror = () => reject(transaction.error || new Error('IndexedDB transaction failed.'));
+  });
+}
+
+function getSelectedValues(selector, attributeName) {
+  return [...document.querySelectorAll(selector)]
+    .filter(element => element.classList.contains('selected'))
+    .map(element => element.dataset[attributeName])
+    .filter(Boolean);
+}
+
+function setSelectedValues(selector, attributeName, values) {
+  const selectedSet = new Set(values || []);
+  document.querySelectorAll(selector).forEach(element => {
+    element.classList.toggle('selected', selectedSet.has(element.dataset[attributeName]));
+  });
+}
+
+function setSingleSelectedValue(selector, attributeName, value) {
+  document.querySelectorAll(selector).forEach(element => {
+    element.classList.toggle('selected', element.dataset[attributeName] === value);
+  });
+}
+
+function getCurrentVideoSource() {
+  return state.videoBlob || state.videoFile || null;
+}
+
+function getCurrentVideoMode() {
+  const uploadView = document.getElementById('upload-view');
+  return uploadView && uploadView.style.display === 'block' ? 'upload' : 'record';
+}
+
+function collectRedirectDraft() {
+  const videoSource = getCurrentVideoSource();
+  const videoType = videoSource?.type || 'video/webm';
+
+  return {
+    artists: document.getElementById('artists-input').value.trim(),
+    genres: getSelectedValues('#genre-row .gear-chip', 'val'),
+    chords: getSelectedValues('#chord-grid .chord-btn', 'chord'),
+    guitar: (document.querySelector('#guitar-row .gear-chip.selected') || { dataset: { val: 'cheap acoustic' } }).dataset.val,
+    extras: getSelectedValues('#extras-row .gear-chip', 'val'),
+    gearNotes: document.getElementById('gear-notes').value.trim(),
+    videoMode: getCurrentVideoMode(),
+    video: videoSource ? {
+      blob: videoSource,
+      sourceKind: state.videoFile ? 'file' : 'recorded',
+      type: videoType,
+      name: state.videoFile?.name || `recording.${videoType.split('/')[1] || 'webm'}`,
+      lastModified: state.videoFile?.lastModified || Date.now()
+    } : null
+  };
+}
+
+async function saveRedirectDraft() {
+  const draft = collectRedirectDraft();
+  localStorage.setItem(SPOTIFY_DRAFT_STORAGE_KEY, JSON.stringify({
+    artists: draft.artists,
+    genres: draft.genres,
+    chords: draft.chords,
+    guitar: draft.guitar,
+    extras: draft.extras,
+    gearNotes: draft.gearNotes,
+    videoMode: draft.videoMode
+  }));
+
+  const db = await openDraftDatabase();
+  if (!db) return;
+
+  const transaction = db.transaction(SPOTIFY_DRAFT_STORE_NAME, 'readwrite');
+  const store = transaction.objectStore(SPOTIFY_DRAFT_STORE_NAME);
+  store.put(draft, SPOTIFY_DRAFT_STORAGE_KEY);
+  await waitForTransaction(transaction);
+  db.close();
+}
+
+async function readRedirectDraft() {
+  const fallback = (() => {
+    const raw = localStorage.getItem(SPOTIFY_DRAFT_STORAGE_KEY);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  })();
+
+  const db = await openDraftDatabase();
+  if (!db) return fallback;
+
+  const transaction = db.transaction(SPOTIFY_DRAFT_STORE_NAME, 'readonly');
+  const store = transaction.objectStore(SPOTIFY_DRAFT_STORE_NAME);
+  const draft = await resolveIdbRequest(store.get(SPOTIFY_DRAFT_STORAGE_KEY));
+  db.close();
+  return draft || fallback;
+}
+
+async function clearRedirectDraft() {
+  localStorage.removeItem(SPOTIFY_DRAFT_STORAGE_KEY);
+
+  const db = await openDraftDatabase();
+  if (!db) return;
+
+  const transaction = db.transaction(SPOTIFY_DRAFT_STORE_NAME, 'readwrite');
+  const store = transaction.objectStore(SPOTIFY_DRAFT_STORE_NAME);
+  store.delete(SPOTIFY_DRAFT_STORAGE_KEY);
+  await waitForTransaction(transaction);
+  db.close();
+}
+
+function applyRedirectDraft(draft) {
+  if (!draft) return false;
+
+  document.getElementById('artists-input').value = draft.artists || '';
+  document.getElementById('gear-notes').value = draft.gearNotes || '';
+  setSelectedValues('#genre-row .gear-chip', 'val', draft.genres || []);
+  setSelectedValues('#chord-grid .chord-btn', 'chord', draft.chords || []);
+  setSelectedValues('#extras-row .gear-chip', 'val', draft.extras || []);
+  setSingleSelectedValue('#guitar-row .gear-chip', 'val', draft.guitar || 'cheap acoustic');
+  switchVideoTab(draft.videoMode === 'upload' ? 'upload' : 'record');
+
+  revokeUploadedMediaUrl();
+  state.localPreviewFrames = [];
+  state.localPreviewPromise = null;
+  state.videoFile = null;
+  state.videoBlob = null;
+
+  if (draft.video?.blob) {
+    if (draft.video.sourceKind === 'file') {
+      state.videoFile = new File([draft.video.blob], draft.video.name || 'upload.webm', {
+        type: draft.video.type || 'video/webm',
+        lastModified: draft.video.lastModified || Date.now()
+      });
+    } else {
+      state.videoBlob = draft.video.blob;
+    }
+
+    const restoredSource = getCurrentVideoSource();
+    if (restoredSource) {
+      showVideoReady(`${draft.video.name || 'Video'} · ${(restoredSource.size / 1024 / 1024).toFixed(1)} MB`);
+      queueLocalPreviewFrames();
+    }
+  } else {
+    document.getElementById('video-ready').style.display = 'none';
+    document.getElementById('video-file').value = '';
+  }
+
+  collectInputs();
+  return true;
+}
+
+async function restoreRedirectDraft() {
+  try {
+    const draft = await readRedirectDraft();
+    if (!draft) return false;
+    const restored = applyRedirectDraft(draft);
+    await clearRedirectDraft();
+    return restored;
+  } catch (error) {
+    console.warn('Could not restore Spotify redirect draft:', error);
+    return false;
+  }
+}
 
 function waitForVideoEvent(video, eventName) {
   return new Promise((resolve, reject) => {
@@ -889,9 +1144,56 @@ function parseCsvList(value) {
   return value.split(',').map(item => item.trim()).filter(Boolean);
 }
 
+function getConfiguredUploadLimitMb() {
+  return Math.max(1, Number(state.config?.uploadLimitMb || 100));
+}
+
+function formatUploadLimitHint() {
+  const limitMb = getConfiguredUploadLimitMb();
+  return Number.isInteger(limitMb) ? String(limitMb) : limitMb.toFixed(1);
+}
+
+function updateVideoInputHints() {
+  const uploadSub = document.getElementById('video-upload-sub');
+  const recordHint = document.getElementById('record-hint');
+  const limitHint = formatUploadLimitHint();
+  const deploymentHint = state.config?.deploymentTarget === 'vercel'
+    ? `Keep the clip under ${limitHint}MB on this deployment.`
+    : `Keep the clip under ${limitHint}MB.`;
+
+  if (uploadSub) {
+    uploadSub.textContent = `MP4, MOV, WebM · max ${limitHint}MB`;
+  }
+
+  if (recordHint) {
+    recordHint.innerHTML = `Record 15–30 seconds of you strumming — any chord or song you're trying.<br/>Gemini will analyse your technique, rhythm, buzz risk, and sound quality. ${deploymentHint}`;
+  }
+}
+
+function showInputError(message) {
+  const err = document.getElementById('input-error');
+  err.style.display = 'block';
+  err.textContent = message;
+}
+
+function getVideoSizeMb(fileOrBlob) {
+  return fileOrBlob ? fileOrBlob.size / (1024 * 1024) : 0;
+}
+
+function validateVideoSize(fileOrBlob, label = 'Video') {
+  if (!fileOrBlob) return true;
+
+  const sizeMb = getVideoSizeMb(fileOrBlob);
+  const limitMb = getConfiguredUploadLimitMb();
+  if (sizeMb <= limitMb) return true;
+
+  showInputError(`${label} is ${sizeMb.toFixed(1)}MB. This deployment accepts clips up to ${formatUploadLimitHint()}MB. Record a shorter clip or upload a smaller file.`);
+  return false;
+}
+
 function getSpotifyRedirectUri() {
   try {
-    const url = new URL(state.backendBase || 'http://127.0.0.1:3001');
+    const url = new URL(state.backendBase || window.location.origin || 'http://127.0.0.1:3001');
     if (url.hostname === 'localhost') url.hostname = '127.0.0.1';
     url.pathname = '/';
     url.search = '';
@@ -1111,6 +1413,12 @@ async function connectSpotify() {
     return;
   }
 
+  try {
+    await saveRedirectDraft();
+  } catch (error) {
+    console.warn('Could not persist the current draft before Spotify auth:', error);
+  }
+
   const verifier = randomString(96);
   const challenge = toBase64Url(await sha256(verifier));
   const requestState = randomString(24);
@@ -1139,11 +1447,13 @@ function disconnectSpotify() {
 
 async function initApp() {
   const foundBackend = await fetchAppConfig();
+  updateVideoInputHints();
   applyBackendAssetUrls();
   initHeroVideo();
   renderSpotifyState(foundBackend ? '' : 'Could not reach the HonestGuitar backend. Start `npm start` and open http://localhost:3001.');
   await handleSpotifyCallback();
   await hydrateSpotifySession();
+  await restoreRedirectDraft();
 }
 
 // ─── CHIP TOGGLES ─────────────────────────────────────────────────────────────
@@ -1191,17 +1501,26 @@ function toggleRecord() {
     mediaRecorder.stop();
     return;
   }
+
+  const recordingOptions = getRecordingOptions();
   recordedChunks = [];
-  mediaRecorder = new MediaRecorder(mediaStream, { mimeType: 'video/webm;codecs=vp9,opus' });
+  mediaRecorder = new MediaRecorder(mediaStream, recordingOptions);
   mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
   mediaRecorder.onstop = () => {
-    state.videoBlob = new Blob(recordedChunks, { type: 'video/webm' });
-    showVideoReady(`Recorded clip · ${(state.videoBlob.size/1024/1024).toFixed(1)} MB`);
-    queueLocalPreviewFrames();
+    state.videoFile = null;
+    state.videoBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || recordingOptions.mimeType || 'video/webm' });
     document.getElementById('record-btn').innerHTML = '● Record';
     document.getElementById('record-btn').style.background = 'var(--accent)';
     document.getElementById('stop-btn').style.display = 'none';
     document.getElementById('record-btn').style.display = 'flex';
+
+    if (!validateVideoSize(state.videoBlob, 'Recorded clip')) {
+      clearVideo();
+      return;
+    }
+
+    showVideoReady(`Recorded clip · ${(state.videoBlob.size/1024/1024).toFixed(1)} MB`);
+    queueLocalPreviewFrames();
   };
   mediaRecorder.start();
   document.getElementById('record-btn').innerHTML = '⏸ Recording...';
@@ -1211,9 +1530,36 @@ function toggleRecord() {
 
 function stopRecord() { if (mediaRecorder) mediaRecorder.stop(); }
 
+function getRecordingOptions() {
+  const baseOptions = {
+    videoBitsPerSecond: 650_000,
+    audioBitsPerSecond: 96_000
+  };
+  const mimeTypes = [
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm'
+  ];
+
+  for (const mimeType of mimeTypes) {
+    if (typeof MediaRecorder.isTypeSupported === 'function' && !MediaRecorder.isTypeSupported(mimeType)) {
+      continue;
+    }
+
+    return { ...baseOptions, mimeType };
+  }
+
+  return baseOptions;
+}
+
 function handleVideoUpload(input) {
   const file = input.files[0];
   if (!file) return;
+  if (!validateVideoSize(file, file.name || 'Uploaded video')) {
+    input.value = '';
+    return;
+  }
+
   state.videoFile = file;
   state.videoBlob = null;
   showVideoReady(`${file.name} · ${(file.size/1024/1024).toFixed(1)} MB`);
@@ -1226,6 +1572,7 @@ function showVideoReady(text) {
 }
 
 function clearVideo() {
+  revokeUploadedMediaUrl();
   state.videoFile = null; state.videoBlob = null;
   state.localPreviewFrames = [];
   state.localPreviewPromise = null;
@@ -1252,6 +1599,67 @@ function setCard(id, status, text) {
   stat.textContent = status==='active' ? '▶ '+text : status==='done' ? '✓ '+text : '— '+text;
 }
 
+function clearAgentDemoTimers() {
+  state.agentDemoTimers.forEach(timer => clearTimeout(timer));
+  state.agentDemoTimers = [];
+}
+
+function queueAgentDemoStep(delayMs, fn) {
+  const timer = window.setTimeout(fn, delayMs);
+  state.agentDemoTimers.push(timer);
+}
+
+function startAgentDemo(hasVideo) {
+  clearAgentDemoTimers();
+  document.getElementById('agent-subtitle').textContent = 'Preparing your roadmap...';
+
+  queueAgentDemoStep(150, () => {
+    addLog('orchestrator', 'HonestGuitar agent runtime started');
+    setProgress(8);
+  });
+
+  queueAgentDemoStep(650, () => {
+    if (hasVideo) {
+      setCard('video', 'active', 'analysing');
+      addLog('video-analyser', 'Extracting frames and audio from the uploaded clip');
+      setProgress(18);
+    } else {
+      setCard('video', 'done', 'skipped');
+      addLog('orchestrator', 'No video provided — using profile and taste only');
+      setProgress(18);
+    }
+  });
+
+  queueAgentDemoStep(1500, () => {
+    if (hasVideo) {
+      addLog('video-analyser', 'Gemini is scoring posture, strumming, and sound quality');
+      setProgress(28);
+    }
+    setCard('tab', 'active', 'scraping');
+    addLog('tab-scraper', 'Searching Ultimate Guitar for playable songs');
+  });
+
+  queueAgentDemoStep(2600, () => {
+    if (hasVideo) setCard('video', 'done', 'done');
+    setCard('forum', 'active', 'mining');
+    addLog('forum-miner', 'Collecting beginner difficulty notes from guitar forums');
+    setProgress(46);
+  });
+
+  queueAgentDemoStep(3800, () => {
+    setCard('tab', 'done', 'done');
+    setCard('forum', 'done', 'done');
+    setCard('synth', 'active', 'synthesising');
+    addLog('synthesiser', 'Blending clip analysis, taste profile, and scraped web data');
+    setProgress(72);
+  });
+
+  queueAgentDemoStep(5200, () => {
+    addLog('synthesiser', 'Generating the roadmap and sorting songs by your current level');
+    setProgress(88);
+  });
+}
+
 // ─── MAIN FLOW ────────────────────────────────────────────────────────────────
 function collectInputs() {
   state.artists = document.getElementById('artists-input').value.trim();
@@ -1264,16 +1672,18 @@ function collectInputs() {
 
 async function startAgent() {
   collectInputs();
-  queueLocalPreviewFrames();
   const err = document.getElementById('input-error');
   if (!state.artists && !state.genres.length && !state.spotify.topArtists.length) { err.style.display='block'; err.textContent='Please enter at least one artist or genre, or connect Spotify.'; return; }
   if (!state.chords.length) { err.style.display='block'; err.textContent='Please select your known chords.'; return; }
+  if (!validateVideoSize(state.videoBlob || state.videoFile, state.videoBlob ? 'Recorded clip' : (state.videoFile?.name || 'Uploaded video'))) { return; }
   err.style.display = 'none';
+  queueLocalPreviewFrames();
   document.getElementById('agent-error').style.display = 'none';
   document.getElementById('log-body').innerHTML = '';
   setProgress(0);
   ['video','tab','forum','synth'].forEach(a => setCard(a,'idle','idle'));
   showScreen('screen-agent');
+  startAgentDemo(Boolean(state.videoBlob || state.videoFile));
   await runPipeline();
 }
 
@@ -1302,73 +1712,38 @@ async function runPipeline() {
     setCard('video', 'active', 'analysing');
   }
 
-  addLog('orchestrator', 'HonestGuitar agent runtime started');
-  addLog('orchestrator', `Profile: chords=[${state.chords.join(', ')}]`);
-  addLog('orchestrator', `Gear: ${state.guitar} · ${state.extras.join(', ')}`);
-  if (state.spotify.topArtists.length) addLog('orchestrator', `Spotify taste import: ${state.spotify.topArtists.slice(0, 5).join(', ')}`);
-  setProgress(8);
-
-  // Call backend with SSE stream
+  // Call backend with plain POST/JSON
   try {
-    const backendBase = state.backendBase || 'http://localhost:3001';
+    const backendBase = state.backendBase || window.location.origin || 'http://localhost:3001';
     const response = await fetch(`${backendBase}/api/analyse`, { method: 'POST', body: form });
+    const payload = await response.json().catch(() => ({}));
 
-    if (!response.ok) {
-      throw new Error(`Server error ${response.status}`);
+    if (response.status === 413) {
+      throw new Error(payload.error || `Video upload exceeded the ${formatUploadLimitHint()}MB deployment limit. Use a shorter clip or upload a smaller file.`);
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop();
-      for (const line of lines) {
-        if (!line.startsWith('data:')) continue;
-        try {
-          const event = JSON.parse(line.slice(5).trim());
-          handleSSEEvent(event);
-        } catch {}
-      }
+    if (!response.ok || payload.ok === false) {
+      throw new Error(payload.error || `Server error ${response.status}`);
     }
-  } catch(e) {
-    document.getElementById('agent-error').style.display = 'block';
-    document.getElementById('agent-error').textContent = `Backend error: ${e.message}`;
-  }
-}
 
-// ─── SSE EVENT HANDLER ───────────────────────────────────────────────────────
-function handleSSEEvent(event) {
-  if (event.type === 'log') {
-    addLog(event.agent, event.message);
-    // Update agent card states based on log content
-    if (event.agent === 'video-analyser') setCard('video', 'active', 'analysing');
-    if (event.agent === 'tab-scraper') setCard('tab', 'active', 'scraping');
-    if (event.agent === 'forum-miner') setCard('forum', 'active', 'mining');
-    if (event.agent === 'synthesiser') setCard('synth', 'active', 'synthesising');
-    if (event.message.includes('✓') && event.agent === 'video-analyser') setCard('video','done','done');
-    if (event.message.includes('✓') && event.agent === 'tab-scraper') setCard('tab','done','done');
-    if (event.message.includes('✓') && event.agent === 'forum-miner') setCard('forum','done','done');
-  }
-  if (event.type === 'progress') setProgress(event.pct);
-  if (event.type === 'result') {
-    setCard('synth','done','done');
+    clearAgentDemoTimers();
+    (payload.logs || []).forEach(entry => addLog(entry.agent, entry.message));
+    ['video','tab','forum'].forEach(agent => {
+      const current = document.getElementById(`status-${agent}`);
+      if (current && !current.textContent.includes('skipped')) setCard(agent, 'done', 'done');
+    });
+    setCard('synth', 'done', 'done');
     setProgress(100);
-    addLog('synthesiser', `✓ Roadmap ready — ${event.data.songs?.length} songs`);
-    state.results = event.data;
+    state.results = payload.data;
     showScreen('screen-results');
     renderResults();
     queueLocalPreviewFrames().then(() => {
-      if (state.results === event.data) renderResults();
+      if (state.results === payload.data) renderResults();
     });
-  }
-  if (event.type === 'error') {
+  } catch(e) {
+    clearAgentDemoTimers();
     document.getElementById('agent-error').style.display = 'block';
-    document.getElementById('agent-error').textContent = 'Agent error: ' + event.message;
+    document.getElementById('agent-error').textContent = `Backend error: ${e.message}`;
   }
 }
 
@@ -1385,6 +1760,9 @@ function renderResults() {
   const vf = r.videoFeedbackHighlights;
   const media = r.mediaAnalysis;
   const previewFrames = (media?.previewFrames || []).length ? media.previewFrames : state.localPreviewFrames;
+  const uploadedMediaUrl = getUploadedMediaUrl();
+  const feedbackAudioUrl = media?.audioPreviewUrl || uploadedMediaUrl;
+  const hasFeedbackMedia = Boolean(uploadedMediaUrl || previewFrames.length || media);
   const rawFrameFeedback = (media?.frameFeedback || []).length
     ? media.frameFeedback
     : (media?.visualCorrections || []).map((item, index) => ({
@@ -1401,7 +1779,7 @@ function renderResults() {
     }))
     .filter(item => item.frameSrc);
   stopFrameLoop();
-  if ((vf && (vf.topWin || vf.topFix)) || media) {
+  if ((vf && (vf.topWin || vf.topFix || vf.strummingTip)) || hasFeedbackMedia) {
     const correctionsHtml = (media?.visualCorrections || []).map(correction => `
       <div class="correction-card">
         <div class="correction-area">${correction.focusArea || 'Technique cue'}</div>
@@ -1419,9 +1797,97 @@ function renderResults() {
       .map(correction => correction.focusArea)
       .filter(Boolean)
       .slice(0, 3);
+    const audioInsights = [
+      { label: 'Sound quality', value: media?.soundNote || 'No sound note available' },
+      { label: 'Buzz risk', value: `${media?.buzzRisk || 'unknown'}${media?.buzzNotes ? ` · ${media.buzzNotes}` : ''}` },
+      { label: 'Rhythm', value: media?.rhythmNotes || 'No rhythm note available' },
+      { label: 'Dynamics', value: media?.dynamicsNotes || 'No dynamics note available' },
+      { label: 'Tone', value: media?.toneNotes || 'No tone note available' }
+    ].filter(item => item.value && item.value.trim());
+    const feedbackVideoHtml = uploadedMediaUrl ? `
+        <div class="feedback-video-wrap">
+        <div class="feedback-video-player">
+          <video controls playsinline preload="metadata" loop poster="${previewFrames[0] || ''}">
+            <source src="${uploadedMediaUrl}" type="${state.videoBlob ? 'video/webm' : (state.videoFile?.type || 'video/mp4')}"/>
+          </video>
+          <div class="feedback-video-badge">Uploaded feedback clip</div>
+        </div>
+        <div class="feedback-video-side">
+          <div class="feedback-video-card">
+            <div>
+              <div class="feedback-feed-kicker">Playback</div>
+              <div class="feedback-feed-title">Your analysed take</div>
+              <div class="feedback-video-note">This is the exact clip HonestGuitar passed through the Gemini analysis pipeline. Use it as the reference video while you compare the roadmap, the frame-by-frame corrections, and the sound notes below.</div>
+            </div>
+            <div class="feedback-video-tags">
+              ${media?.postureSummary ? `<span class="feedback-video-tag">posture</span>` : ''}
+              ${media?.strumHandNotes ? `<span class="feedback-video-tag">strumming</span>` : ''}
+              ${media?.transitionFeedback ? `<span class="feedback-video-tag">transitions</span>` : ''}
+              ${audioInsights.length ? `<span class="feedback-video-tag">sound</span>` : ''}
+            </div>
+          </div>
+        </div>
+      </div>
+    ` : '';
     const noFrameNoteHtml = media && !previewFrames.length
       ? `<div class="vf-tip"><strong>Frame preview unavailable:</strong> the clip was analysed, but HonestGuitar could not extract displayable posture frames from this upload.</div>`
       : '';
+    const correctedFeedHtml = (frameFeedback.length || audioInsights.length || uploadedMediaUrl) ? `
+      <div class="corrections-block">
+        <div class="corrections-title">Corrected feedback feed</div>
+        <div class="feedback-feed">
+          <div class="feedback-feed-main">
+            <div class="feedback-feed-kicker">Gemini visual coaching</div>
+            <div class="feedback-feed-title">Red/green posture and strumming corrections</div>
+            <div class="feedback-feed-sub">Each card maps Gemini’s correction language back onto the extracted clip frames so you can compare the wrong pose or stroke against the corrected version immediately.</div>
+            ${frameFeedback.length ? `
+              <div class="feedback-feed-list">
+                ${frameFeedback.map(item => `
+                  <div class="feedback-feed-card">
+                    <div class="feedback-feed-thumb">
+                      <img src="${item.frameSrc}" alt="Gemini corrected feedback frame ${item.frameIndex}"/>
+                      <div class="feedback-feed-frame">Frame ${item.frameIndex}</div>
+                    </div>
+                    <div class="feedback-feed-copy">
+                      <div class="feedback-feed-focus">${item.focusArea || 'Technique cue'}</div>
+                      <div class="feedback-feed-body">
+                        <div class="feedback-feed-row bad">
+                          <span class="feedback-feed-label">Wrong</span>
+                          ${item.wrong || 'No incorrect posture captured.'}
+                        </div>
+                        <div class="feedback-feed-row good">
+                          <span class="feedback-feed-label">Correct</span>
+                          ${item.correct || 'No corrective posture provided.'}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : `
+              <div class="vf-tip"><strong>Visual cue pending:</strong> Gemini analysed the clip, but did not return frame-level correction objects for this upload.</div>
+            `}
+          </div>
+          <div class="feedback-feed-audio">
+            <div>
+              <div class="feedback-feed-kicker">Uploaded clip sound</div>
+              <div class="feedback-feed-title">Audio read from the same take</div>
+              <div class="feedback-feed-sub">Play the clip audio here, then compare the text notes for buzz, rhythm consistency, dynamics, and tone quality.</div>
+            </div>
+            ${typeof media?.soundScore === 'number' ? `<div class="feedback-audio-score">Gemini sound score <strong>${media.soundScore}/100</strong></div>` : ''}
+            ${feedbackAudioUrl ? `<audio class="feedback-audio-player" controls preload="metadata" src="${feedbackAudioUrl}"></audio>` : ''}
+            <div class="feedback-audio-list">
+              ${audioInsights.map(item => `
+                <div class="feedback-audio-item">
+                  <div class="feedback-audio-label">${item.label}</div>
+                  <div class="feedback-audio-value">${item.value}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    ` : '';
     const frameFeedbackHtml = frameFeedback.length ? `
       <div class="corrections-block">
         <div class="corrections-title">Frame-by-frame Gemini feedback</div>
@@ -1488,12 +1954,13 @@ function renderResults() {
           ${vf?.topFix ? `<div class="vf-item"><div class="vf-label">Top fix</div><div class="vf-value">${vf.topFix}</div></div>` : ''}
           ${vf?.strummingTip ? `<div class="vf-item"><div class="vf-label">Strumming tip</div><div class="vf-value">${vf.strummingTip}</div></div>` : ''}
         </div>
-        ${media ? `
+        ${hasFeedbackMedia ? `
+          ${feedbackVideoHtml}
           <div class="analysis-meta">
-            <div class="analysis-pill"><div class="analysis-pill-label">Pattern</div><div class="analysis-pill-value">${media.strummingPattern || 'Not detected clearly'}</div></div>
-            <div class="analysis-pill"><div class="analysis-pill-label">Sound</div><div class="analysis-pill-value">${media.soundNote || 'No sound note available'}</div></div>
-            <div class="analysis-pill"><div class="analysis-pill-label">Buzz risk</div><div class="analysis-pill-value">${media.buzzRisk || 'unknown'}${media.buzzNotes ? ` · ${media.buzzNotes}` : ''}</div></div>
-            <div class="analysis-pill"><div class="analysis-pill-label">Dynamics</div><div class="analysis-pill-value">${media.dynamicsNotes || 'No dynamics note available'}</div></div>
+            <div class="analysis-pill"><div class="analysis-pill-label">Pattern</div><div class="analysis-pill-value">${media?.strummingPattern || 'Not detected clearly'}</div></div>
+            <div class="analysis-pill"><div class="analysis-pill-label">Sound</div><div class="analysis-pill-value">${media?.soundNote || 'No sound note available'}</div></div>
+            <div class="analysis-pill"><div class="analysis-pill-label">Buzz risk</div><div class="analysis-pill-value">${media?.buzzRisk || 'unknown'}${media?.buzzNotes ? ` · ${media.buzzNotes}` : ''}</div></div>
+            <div class="analysis-pill"><div class="analysis-pill-label">Dynamics</div><div class="analysis-pill-value">${media?.dynamicsNotes || 'No dynamics note available'}</div></div>
           </div>
           ${correctionsHtml ? `
             <div class="corrections-block">
@@ -1502,6 +1969,7 @@ function renderResults() {
             </div>
           ` : ''}
           ${frameLoopHtml}
+          ${correctedFeedHtml}
           ${frameFeedbackHtml}
           ${noFrameNoteHtml}
         ` : ''}
@@ -1593,7 +2061,9 @@ function renderResults() {
 }
 
 function resetApp() {
+  clearAgentDemoTimers();
   stopFrameLoop();
+  revokeUploadedMediaUrl();
   showScreen('screen-input');
   document.getElementById('song-list').innerHTML = '';
   document.getElementById('log-body').innerHTML = '';
