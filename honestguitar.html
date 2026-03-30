@@ -401,16 +401,16 @@ input[type="text"]::placeholder{color:var(--text3);}
 <div class="screen active" id="screen-input">
   <div class="top-bar">
     <div class="logo">Honest<span>Guitar</span></div>
-    <div class="badge">TinyFish × OpenAI × Gemini × Spotify</div>
+    <div class="badge">TinyFish × OpenAI × Clip Analysis × Spotify</div>
   </div>
 
   <div class="hero">
     <div class="hero-copy">
       <div class="hero-tag">↳ Autonomous web agents · live web scraping · real forum intel</div>
       <h1>Learn songs you can<br/><em>actually play</em></h1>
-      <p>No barre chord surprises. No gear assumptions. Upload a clip of your playing and HonestGuitar blends Gemini clip analysis, Spotify taste, and live beginner forum intel into a roadmap that matches your hands and your ears.</p>
+      <p>No barre chord surprises. No gear assumptions. Upload a clip of your playing and HonestGuitar blends AI clip analysis, Spotify taste, and live beginner forum intel into a roadmap that matches your hands and your ears.</p>
       <div class="hero-stats">
-        <div class="hero-stat">Gemini clip analysis</div>
+        <div class="hero-stat">AI clip analysis</div>
         <div class="hero-stat">Spotify taste import</div>
         <div class="hero-stat">Live forum scraping</div>
       </div>
@@ -427,7 +427,7 @@ input[type="text"]::placeholder{color:var(--text3);}
             <div class="hero-kicker">Honest beginner signal</div>
             <div class="hero-pill">taste + technique + web</div>
           </div>
-      <div class="hero-note">Your taste from Spotify. Your playing from Gemini. Your next songs from the messy internet where beginners actually admit what hurts.</div>
+      <div class="hero-note">Your taste from Spotify. Your playing from a live clip. Your next songs from the messy internet where beginners actually admit what hurts.</div>
           <div class="hero-grid">
             <div class="hero-grid-card">
               <div class="hero-grid-label">Clip read</div>
@@ -449,61 +449,10 @@ input[type="text"]::placeholder{color:var(--text3);}
 
   <div class="form-container">
 
-    <!-- VIDEO INPUT -->
-    <div class="form-section">
-      <div class="form-section-header">
-        <div class="section-num">1</div>
-        <div class="section-title">Your playing (optional but powerful)</div>
-        <div class="section-sub">Analysed by Gemini</div>
-      </div>
-      <div class="form-body" style="padding:16px 24px;">
-        <div class="video-panel">
-          <div class="video-tabs">
-            <div class="video-tab active" onclick="switchVideoTab('record')">🎥 Record a clip</div>
-            <div class="video-tab" onclick="switchVideoTab('upload')">📁 Upload video</div>
-          </div>
-          <div class="video-body">
-            <!-- Record view -->
-            <div id="record-view">
-              <video id="preview-video" autoplay muted playsinline></video>
-              <div class="record-controls">
-                <button class="btn-record" id="cam-btn" onclick="toggleCamera()">
-                  <span class="rec-dot"></span> Start camera
-                </button>
-                <button class="btn-record" id="record-btn" onclick="toggleRecord()" style="display:none;background:var(--accent)">
-                  ● Record
-                </button>
-                <button class="btn-ghost" id="stop-btn" onclick="stopRecord()" style="display:none">
-                  ■ Stop
-                </button>
-              </div>
-              <div class="record-hint" id="record-hint">Record 15–30 seconds of you strumming — any chord or song you're trying.<br/>Gemini will analyse your technique, rhythm, buzz risk, and sound quality.</div>
-            </div>
-            <!-- Upload view -->
-            <div id="upload-view">
-              <div class="upload-zone" onclick="document.getElementById('video-file').click()">
-                <input type="file" id="video-file" accept="video/*" onchange="handleVideoUpload(this)"/>
-                <div class="upload-icon">🎸</div>
-                <div class="upload-label">Drop your video here or click to browse</div>
-                <div class="upload-sub" id="video-upload-sub">MP4, MOV, WebM · max 100MB</div>
-              </div>
-            </div>
-            <!-- Video ready state -->
-            <div id="video-ready" style="display:none;margin-top:12px;" class="video-ready">
-              <span class="video-ready-icon">✓</span>
-              <span id="video-ready-text">Video ready for analysis</span>
-              <button class="btn-ghost" style="margin-left:auto;padding:4px 10px;font-size:12px;" onclick="clearVideo()">Remove</button>
-            </div>
-          </div>
-        </div>
-        <div class="skip-note">No video? That's fine — the agents will use your chord declaration and gear profile instead.</div>
-      </div>
-    </div>
-
     <!-- MUSIC TASTE -->
     <div class="form-section">
       <div class="form-section-header">
-        <div class="section-num">2</div>
+        <div class="section-num">1</div>
         <div class="section-title">Your music taste</div>
         <div class="section-sub">Spotify-style</div>
       </div>
@@ -539,6 +488,54 @@ input[type="text"]::placeholder{color:var(--text3);}
             <div class="gear-chip" data-val="singer-songwriter">Singer-songwriter</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- VIDEO INPUT -->
+    <div class="form-section">
+      <div class="form-section-header">
+        <div class="section-num">2</div>
+        <div class="section-title">Your playing (optional but powerful)</div>
+        <div class="section-sub" id="video-section-sub">Analysed from your clip</div>
+      </div>
+      <div class="form-body" style="padding:16px 24px;">
+        <div class="video-panel">
+          <div class="video-tabs">
+            <div class="video-tab active" onclick="switchVideoTab('record')">🎥 Record a clip</div>
+            <div class="video-tab" onclick="switchVideoTab('upload')">📁 Upload video</div>
+          </div>
+          <div class="video-body">
+            <div id="record-view">
+              <video id="preview-video" autoplay muted playsinline></video>
+              <div class="record-controls">
+                <button class="btn-record" id="cam-btn" onclick="toggleCamera()">
+                  <span class="rec-dot"></span> Start camera
+                </button>
+                <button class="btn-record" id="record-btn" onclick="toggleRecord()" style="display:none;background:var(--accent)">
+                  ● Record
+                </button>
+                <button class="btn-ghost" id="stop-btn" onclick="stopRecord()" style="display:none">
+                  ■ Stop
+                </button>
+              </div>
+              <div class="record-hint" id="record-hint">Record 15–30 seconds of you strumming — any chord or song you're trying.<br/>The model will analyse your technique, rhythm, buzz risk, and sound quality.</div>
+            </div>
+            <div id="upload-view">
+              <div class="upload-zone" onclick="document.getElementById('video-file').click()">
+                <input type="file" id="video-file" accept="video/*" onchange="handleVideoUpload(this)"/>
+                <div class="upload-icon">🎸</div>
+                <div class="upload-label">Drop your video here or click to browse</div>
+                <div class="upload-sub" id="video-upload-sub">MP4, MOV, WebM · max 100MB</div>
+              </div>
+            </div>
+            <div id="video-ready" style="display:none;margin-top:12px;" class="video-ready">
+              <span class="video-ready-icon">✓</span>
+              <span id="video-ready-text">Video ready for analysis</span>
+              <button class="btn-ghost" style="margin-left:auto;padding:4px 10px;font-size:12px;" onclick="clearVideo()">Remove</button>
+            </div>
+          </div>
+        </div>
+        <div class="skip-note">No video? That's fine — the agents will use your chord declaration and gear profile instead.</div>
       </div>
     </div>
 
@@ -699,7 +696,7 @@ input[type="text"]::placeholder{color:var(--text3);}
     <div class="wm-right">
       <div class="powered-by">TinyFish</div>
       <div class="powered-by">OpenAI GPT-4o</div>
-      <div class="powered-by">Gemini 3 Flash</div>
+      <div class="powered-by">Clip Analysis</div>
     </div>
   </div>
 </div>
@@ -729,14 +726,16 @@ const state = {
   videoBlob: null,
   results: null,
   backendBase: null,
-  config: { spotifyClientId: null, spotifyConfigured: false, geminiConfigured: false, uploadLimitMb: 100, deploymentTarget: 'local' },
+  config: { spotifyClientId: null, spotifyConfigured: false, geminiConfigured: false, mediaAnalysisProvider: 'gemini', mediaAnalysisProviderLabel: 'AI', mediaAnalysisConfigured: false, uploadLimitMb: 100, deploymentTarget: 'local' },
   spotify: { connected: false, topArtists: [], topTracks: [], session: null },
   frameLoopTimer: null,
   frameLoopIndex: 0,
   localPreviewFrames: [],
   localPreviewPromise: null,
   uploadedMediaUrl: null,
-  agentDemoTimers: []
+  agentDemoTimers: [],
+  currentJobId: null,
+  jobLogCount: 0
 };
 
 // ─── SCREEN NAV ───────────────────────────────────────────────────────────────
@@ -1153,9 +1152,14 @@ function formatUploadLimitHint() {
   return Number.isInteger(limitMb) ? String(limitMb) : limitMb.toFixed(1);
 }
 
+function getMediaAnalysisLabel() {
+  return state.config?.mediaAnalysisProviderLabel || 'AI';
+}
+
 function updateVideoInputHints() {
   const uploadSub = document.getElementById('video-upload-sub');
   const recordHint = document.getElementById('record-hint');
+  const sectionSub = document.getElementById('video-section-sub');
   const limitHint = formatUploadLimitHint();
   const deploymentHint = state.config?.deploymentTarget === 'vercel'
     ? `Keep the clip under ${limitHint}MB on this deployment.`
@@ -1165,8 +1169,12 @@ function updateVideoInputHints() {
     uploadSub.textContent = `MP4, MOV, WebM · max ${limitHint}MB`;
   }
 
+  if (sectionSub) {
+    sectionSub.textContent = `Analysed by ${getMediaAnalysisLabel()}`;
+  }
+
   if (recordHint) {
-    recordHint.innerHTML = `Record 15–30 seconds of you strumming — any chord or song you're trying.<br/>Gemini will analyse your technique, rhythm, buzz risk, and sound quality. ${deploymentHint}`;
+    recordHint.innerHTML = `Record 15–30 seconds of you strumming — any chord or song you're trying.<br/>${getMediaAnalysisLabel()} will analyse your technique, rhythm, buzz risk, and sound quality. ${deploymentHint}`;
   }
 }
 
@@ -1609,54 +1617,149 @@ function queueAgentDemoStep(delayMs, fn) {
   state.agentDemoTimers.push(timer);
 }
 
-function startAgentDemo(hasVideo) {
-  clearAgentDemoTimers();
-  document.getElementById('agent-subtitle').textContent = 'Preparing your roadmap...';
+function syncJobLogs(logs) {
+  const entries = Array.isArray(logs) ? logs : [];
+  const logBody = document.getElementById('log-body');
 
-  queueAgentDemoStep(150, () => {
-    addLog('orchestrator', 'HonestGuitar agent runtime started');
-    setProgress(8);
+  if (state.jobLogCount > entries.length) {
+    logBody.innerHTML = '';
+    state.jobLogCount = 0;
+  }
+
+  entries.slice(state.jobLogCount).forEach(entry => addLog(entry.agent, entry.message));
+  state.jobLogCount = entries.length;
+}
+
+function syncAgentCards(agents = {}) {
+  const ids = ['video', 'tab', 'forum', 'synth'];
+
+  ids.forEach(id => {
+    const agent = agents[id] || { status: 'idle', text: 'idle' };
+    setCard(id, agent.status || 'idle', agent.text || 'idle');
   });
+}
 
-  queueAgentDemoStep(650, () => {
-    if (hasVideo) {
-      setCard('video', 'active', 'analysing');
-      addLog('video-analyser', 'Extracting frames and audio from the uploaded clip');
-      setProgress(18);
-    } else {
-      setCard('video', 'done', 'skipped');
-      addLog('orchestrator', 'No video provided — using profile and taste only');
-      setProgress(18);
+function sleep(ms) {
+  return new Promise(resolve => window.setTimeout(resolve, ms));
+}
+
+function applyJobPayload(payload) {
+  setProgress(payload.progress || 0);
+  syncJobLogs(payload.logs);
+  syncAgentCards(payload.agents);
+
+  if (payload.status === 'queued') {
+    document.getElementById('agent-subtitle').textContent = 'Job queued on the backend...';
+  } else if (payload.status === 'running') {
+    document.getElementById('agent-subtitle').textContent = 'Streaming live backend progress...';
+  }
+}
+
+async function pollAnalysisJob(jobId) {
+  let transientFailures = 0;
+
+  while (true) {
+    try {
+      const backendBase = state.backendBase || window.location.origin || 'http://localhost:3001';
+      const response = await fetch(`${backendBase}/api/analyse/${jobId}`);
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok || payload.ok === false) {
+        throw new Error(payload.error || `Job status error ${response.status}`);
+      }
+
+      transientFailures = 0;
+      applyJobPayload(payload);
+
+      if (payload.status === 'succeeded') {
+        state.results = payload.data;
+        setProgress(100);
+        showScreen('screen-results');
+        renderResults();
+        queueLocalPreviewFrames().then(() => {
+          if (state.results === payload.data) renderResults();
+        });
+        return;
+      }
+
+      if (payload.status === 'failed') {
+        throw new Error(payload.error || 'Analysis job failed.');
+      }
+
+    } catch (error) {
+      transientFailures += 1;
+      if (transientFailures >= 4) throw error;
     }
-  });
 
-  queueAgentDemoStep(1500, () => {
-    if (hasVideo) {
-      addLog('video-analyser', 'Gemini is scoring posture, strumming, and sound quality');
-      setProgress(28);
-    }
-    setCard('tab', 'active', 'scraping');
-    addLog('tab-scraper', 'Searching Ultimate Guitar for playable songs');
-  });
+    await sleep(1500);
+  }
+}
 
-  queueAgentDemoStep(2600, () => {
-    if (hasVideo) setCard('video', 'done', 'done');
-    setCard('forum', 'active', 'mining');
-    addLog('forum-miner', 'Collecting beginner difficulty notes from guitar forums');
-    setProgress(46);
-  });
+async function streamAnalysisJob(jobId) {
+  if (typeof EventSource === 'undefined') {
+    await pollAnalysisJob(jobId);
+    return;
+  }
 
-  queueAgentDemoStep(3800, () => {
-    setCard('tab', 'done', 'done');
-    setCard('forum', 'done', 'done');
-    setCard('synth', 'active', 'synthesising');
-    addLog('synthesiser', 'Blending clip analysis, taste profile, and scraped web data');
-    setProgress(72);
-  });
+  const backendBase = state.backendBase || window.location.origin || 'http://localhost:3001';
+  const streamUrl = `${backendBase}/api/analyse/${jobId}/events`;
 
-  queueAgentDemoStep(5200, () => {
-    addLog('synthesiser', 'Generating the roadmap and sorting songs by your current level');
-    setProgress(88);
+  await new Promise((resolve, reject) => {
+    let settled = false;
+    const source = new EventSource(streamUrl);
+
+    const close = () => {
+      source.close();
+    };
+
+    const finishWithPayload = payload => {
+      if (payload.status === 'succeeded') {
+        settled = true;
+        close();
+        state.results = payload.data;
+        setProgress(100);
+        showScreen('screen-results');
+        renderResults();
+        queueLocalPreviewFrames().then(() => {
+          if (state.results === payload.data) renderResults();
+        });
+        resolve();
+        return true;
+      }
+
+      if (payload.status === 'failed') {
+        settled = true;
+        close();
+        reject(new Error(payload.error || 'Analysis job failed.'));
+        return true;
+      }
+
+      return false;
+    };
+
+    source.onmessage = event => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (!payload || payload.ok === false) return;
+        applyJobPayload(payload);
+        finishWithPayload(payload);
+      } catch (error) {
+        console.warn('Could not parse analysis stream payload:', error);
+      }
+    };
+
+    source.addEventListener('error', async () => {
+      if (settled) return;
+      close();
+      try {
+        await pollAnalysisJob(jobId);
+        settled = true;
+        resolve();
+      } catch (error) {
+        settled = true;
+        reject(error);
+      }
+    });
   });
 }
 
@@ -1680,10 +1783,13 @@ async function startAgent() {
   queueLocalPreviewFrames();
   document.getElementById('agent-error').style.display = 'none';
   document.getElementById('log-body').innerHTML = '';
+  document.getElementById('agent-subtitle').textContent = 'Submitting your job to the backend...';
   setProgress(0);
+  state.currentJobId = null;
+  state.jobLogCount = 0;
+  addLog('orchestrator', 'Uploading your request to the backend...');
   ['video','tab','forum','synth'].forEach(a => setCard(a,'idle','idle'));
   showScreen('screen-agent');
-  startAgentDemo(Boolean(state.videoBlob || state.videoFile));
   await runPipeline();
 }
 
@@ -1726,20 +1832,10 @@ async function runPipeline() {
       throw new Error(payload.error || `Server error ${response.status}`);
     }
 
-    clearAgentDemoTimers();
-    (payload.logs || []).forEach(entry => addLog(entry.agent, entry.message));
-    ['video','tab','forum'].forEach(agent => {
-      const current = document.getElementById(`status-${agent}`);
-      if (current && !current.textContent.includes('skipped')) setCard(agent, 'done', 'done');
-    });
-    setCard('synth', 'done', 'done');
-    setProgress(100);
-    state.results = payload.data;
-    showScreen('screen-results');
-    renderResults();
-    queueLocalPreviewFrames().then(() => {
-      if (state.results === payload.data) renderResults();
-    });
+    state.currentJobId = payload.jobId;
+    addLog('orchestrator', `Job accepted by backend (${payload.jobId.slice(0, 8)})`);
+    document.getElementById('agent-subtitle').textContent = 'Job accepted. Connecting to live backend stream...';
+    await streamAnalysisJob(payload.jobId);
   } catch(e) {
     clearAgentDemoTimers();
     document.getElementById('agent-error').style.display = 'block';
@@ -1759,6 +1855,7 @@ function renderResults() {
   const vfPanel = document.getElementById('video-feedback-panel');
   const vf = r.videoFeedbackHighlights;
   const media = r.mediaAnalysis;
+  const analysisEngineLabel = media?.analysisEngine || 'AI clip analysis';
   const previewFrames = (media?.previewFrames || []).length ? media.previewFrames : state.localPreviewFrames;
   const uploadedMediaUrl = getUploadedMediaUrl();
   const feedbackAudioUrl = media?.audioPreviewUrl || uploadedMediaUrl;
@@ -1817,7 +1914,7 @@ function renderResults() {
             <div>
               <div class="feedback-feed-kicker">Playback</div>
               <div class="feedback-feed-title">Your analysed take</div>
-              <div class="feedback-video-note">This is the exact clip HonestGuitar passed through the Gemini analysis pipeline. Use it as the reference video while you compare the roadmap, the frame-by-frame corrections, and the sound notes below.</div>
+              <div class="feedback-video-note">This is the exact clip HonestGuitar passed through the ${analysisEngineLabel} pipeline. Use it as the reference video while you compare the roadmap, the frame-by-frame corrections, and the sound notes below.</div>
             </div>
             <div class="feedback-video-tags">
               ${media?.postureSummary ? `<span class="feedback-video-tag">posture</span>` : ''}
@@ -1837,9 +1934,9 @@ function renderResults() {
         <div class="corrections-title">Corrected feedback feed</div>
         <div class="feedback-feed">
           <div class="feedback-feed-main">
-            <div class="feedback-feed-kicker">Gemini visual coaching</div>
-            <div class="feedback-feed-title">Red/green posture and strumming corrections</div>
-            <div class="feedback-feed-sub">Each card maps Gemini’s correction language back onto the extracted clip frames so you can compare the wrong pose or stroke against the corrected version immediately.</div>
+              <div class="feedback-feed-kicker">${analysisEngineLabel} visual coaching</div>
+              <div class="feedback-feed-title">Red/green posture and strumming corrections</div>
+              <div class="feedback-feed-sub">Each card maps the model's correction language back onto the extracted clip frames so you can compare the wrong pose or stroke against the corrected version immediately.</div>
             ${frameFeedback.length ? `
               <div class="feedback-feed-list">
                 ${frameFeedback.map(item => `
@@ -1865,7 +1962,7 @@ function renderResults() {
                 `).join('')}
               </div>
             ` : `
-              <div class="vf-tip"><strong>Visual cue pending:</strong> Gemini analysed the clip, but did not return frame-level correction objects for this upload.</div>
+              <div class="vf-tip"><strong>Visual cue pending:</strong> The clip was analysed, but no frame-level correction objects were returned for this upload.</div>
             `}
           </div>
           <div class="feedback-feed-audio">
@@ -1874,7 +1971,7 @@ function renderResults() {
               <div class="feedback-feed-title">Audio read from the same take</div>
               <div class="feedback-feed-sub">Play the clip audio here, then compare the text notes for buzz, rhythm consistency, dynamics, and tone quality.</div>
             </div>
-            ${typeof media?.soundScore === 'number' ? `<div class="feedback-audio-score">Gemini sound score <strong>${media.soundScore}/100</strong></div>` : ''}
+            ${typeof media?.soundScore === 'number' ? `<div class="feedback-audio-score">${analysisEngineLabel} sound score <strong>${media.soundScore}/100</strong></div>` : ''}
             ${feedbackAudioUrl ? `<audio class="feedback-audio-player" controls preload="metadata" src="${feedbackAudioUrl}"></audio>` : ''}
             <div class="feedback-audio-list">
               ${audioInsights.map(item => `
@@ -1890,7 +1987,7 @@ function renderResults() {
     ` : '';
     const frameFeedbackHtml = frameFeedback.length ? `
       <div class="corrections-block">
-        <div class="corrections-title">Frame-by-frame Gemini feedback</div>
+        <div class="corrections-title">Frame-by-frame clip feedback</div>
         <div class="frame-feedback-grid">
           ${frameFeedback.map(item => `
             <div class="frame-feedback-card">
@@ -1912,22 +2009,22 @@ function renderResults() {
       <div class="clip-loop-wrap">
         <div class="clip-loop-main">
           <img id="frame-loop-image" src="${previewFrames[0]}" alt="Looping extracted frames from your uploaded guitar clip"/>
-          <div class="clip-loop-badge">Gemini clip frames</div>
+          <div class="clip-loop-badge">Clip frames</div>
         </div>
         <div class="clip-loop-side">
           <div class="clip-loop-card">
             <div>
               <div class="clip-loop-title">Visual playback</div>
-              <div class="clip-loop-text">Looping extracted frames from the uploaded clip so you can compare Gemini’s posture and strumming notes against the exact moments it analysed. Tap any frame below to pin a pose or stroke.</div>
+              <div class="clip-loop-text">Looping extracted frames from the uploaded clip so you can compare the model's posture and strumming notes against the exact moments it analysed. Tap any frame below to pin a pose or stroke.</div>
             </div>
             <div class="clip-loop-dots">
               ${previewFrames.map((_, index) => `<span class="clip-loop-dot ${index === 0 ? 'active' : ''}"></span>`).join('')}
             </div>
-            ${(frameNotes.length || media.postureSummary || media.strumHandNotes) ? `
+            ${(frameNotes.length || media?.postureSummary || media?.strumHandNotes) ? `
               <div class="clip-loop-notes">
                 ${frameNotes.map(note => `<span class="clip-loop-note">${note}</span>`).join('')}
-                ${media.postureSummary ? `<span class="clip-loop-note">posture</span>` : ''}
-                ${media.strumHandNotes ? `<span class="clip-loop-note">strumming stroke</span>` : ''}
+                ${media?.postureSummary ? `<span class="clip-loop-note">posture</span>` : ''}
+                ${media?.strumHandNotes ? `<span class="clip-loop-note">strumming stroke</span>` : ''}
               </div>
             ` : ''}
           </div>
@@ -1948,7 +2045,7 @@ function renderResults() {
     vfPanel.style.display = 'block';
     vfPanel.innerHTML = `
       <div class="video-feedback-card" style="width:100%;max-width:820px;margin:0 auto 24px;">
-        <div class="vf-header"><span class="vf-icon">🎥</span><span class="vf-title">Clip analysis — what Gemini saw and heard</span></div>
+        <div class="vf-header"><span class="vf-icon">🎥</span><span class="vf-title">Clip analysis — what ${analysisEngineLabel} saw and heard</span></div>
         <div class="vf-grid">
           ${vf?.topWin ? `<div class="vf-item"><div class="vf-label">Doing well</div><div class="vf-value">${vf.topWin}</div></div>` : ''}
           ${vf?.topFix ? `<div class="vf-item"><div class="vf-label">Top fix</div><div class="vf-value">${vf.topFix}</div></div>` : ''}
@@ -2064,6 +2161,8 @@ function resetApp() {
   clearAgentDemoTimers();
   stopFrameLoop();
   revokeUploadedMediaUrl();
+  state.currentJobId = null;
+  state.jobLogCount = 0;
   showScreen('screen-input');
   document.getElementById('song-list').innerHTML = '';
   document.getElementById('log-body').innerHTML = '';

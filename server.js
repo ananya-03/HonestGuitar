@@ -13,11 +13,14 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
+import { waitUntil } from '@vercel/functions';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
-import { analyseVideo } from './videoAnalyser.js';
-import { scrapeTabsAndChords, scrapeSongForums, scrapeGearForums } from './webAgent.js';
-import { synthesiseRoadmap, synthesiseSongTips } from './synthesiser.js';
+import { scrapeSongForums, scrapeGearForums } from './webAgent.js';
+import { synthesiseSongTips } from './synthesiser.js';
+import { runAnalysisJob } from './analysisJob.js';
+import { createJob, getJobStoreMode, isJobStoreReady, readJob, toClientJob } from './jobStore.js';
+import { getMediaAnalysisProvider, getMediaAnalysisProviderLabel, isMediaAnalysisConfigured } from './videoAnalyser.js';
 
 const ROOT_DIR = dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = join(ROOT_DIR, 'public');
@@ -29,109 +32,12 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: upl
 const tinyFishConfigured = Boolean(process.env.TINYFISH_API_KEY || process.env.TINY_FISH_API_KEY);
 const geminiConfigured = Boolean(process.env.GEMINI_API_KEY);
 const spotifyConfigured = Boolean(process.env.SPOTIFY_CLIENT_ID);
+const mediaAnalysisProvider = getMediaAnalysisProvider();
+const mediaAnalysisProviderLabel = getMediaAnalysisProviderLabel();
+const mediaAnalysisConfigured = isMediaAnalysisConfigured();
 
 function normaliseArray(value) {
   return Array.isArray(value) ? value.filter(Boolean).map(item => String(item).trim()).filter(Boolean) : [];
-}
-
-function parseArtistString(value) {
-  return String(value || '')
-    .split(',')
-    .map(item => item.trim())
-    .filter(Boolean);
-}
-
-function uniqueStrings(values) {
-  return [...new Set(values.filter(Boolean).map(item => String(item).trim()).filter(Boolean))];
-}
-
-function normaliseName(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-}
-
-function buildPreferredArtists({ artists = '', spotifyTopArtists = [] }) {
-  return uniqueStrings([...spotifyTopArtists, ...parseArtistString(artists)]);
-}
-
-function mergeTabResults(results, preferredArtists) {
-  const seen = new Set();
-  const preferredSet = new Set(preferredArtists.map(normaliseName));
-  const songs = [];
-  const raw = [];
-
-  for (const result of results) {
-    for (const song of result?.songs || []) {
-      const key = `${normaliseName(song.title)}::${normaliseName(song.artist)}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      songs.push({
-        ...song,
-        preferredArtist: preferredSet.has(normaliseName(song.artist))
-      });
-    }
-
-    for (const item of result?.raw || []) {
-      const key = `${normaliseName(item.title)}::${normaliseName(item.artist)}`;
-      if (raw.some(existing => `${normaliseName(existing.title)}::${normaliseName(existing.artist)}` === key)) continue;
-      raw.push(item);
-    }
-  }
-
-  songs.sort((a, b) => {
-    if (a.preferredArtist !== b.preferredArtist) return a.preferredArtist ? -1 : 1;
-    return (b.votes || 0) - (a.votes || 0);
-  });
-
-  return {
-    songs: songs.slice(0, 18),
-    raw: raw.slice(0, 40),
-    sources: ['ultimate-guitar.com', 'chordify.net']
-  };
-}
-
-function mergeForumResults(results) {
-  const tips = uniqueStrings(results.flatMap(result => result?.tips || [])).slice(0, 24);
-  const hardSpots = uniqueStrings(results.flatMap(result => result?.hardSpots || [])).slice(0, 12);
-  const capoAlternatives = uniqueStrings(results.flatMap(result => result?.capoAlternatives || [])).slice(0, 8);
-  const sources = uniqueStrings(results.flatMap(result => result?.sources || []));
-  const sourceCount = results.reduce((sum, result) => sum + (result?.sourceCount || 0), 0);
-
-  return { tips, hardSpots, capoAlternatives, sourceCount, sources };
-}
-
-function createTinyFishLogBridge(stream, agent, label) {
-  return event => {
-    if (!event?.type) return;
-
-    if (event.type === 'PROFILE_ATTEMPT') {
-      stream.log(agent, `TinyFish ${event.browserProfile}: starting ${label}`);
-      return;
-    }
-
-    if (event.type === 'STARTED') {
-      stream.log(agent, `TinyFish ${event.browserProfile}: run ${event.runId || 'pending'} started`);
-      return;
-    }
-
-    if (event.type === 'STREAMING_URL') {
-      stream.log(agent, `TinyFish ${event.browserProfile}: live browser stream ready`);
-      return;
-    }
-
-    if (event.type === 'PROGRESS' && event.purpose) {
-      stream.log(agent, `TinyFish ${event.browserProfile}: ${event.purpose}`);
-      return;
-    }
-
-    if (event.type === 'PROFILE_FALLBACK' && event.purpose) {
-      stream.log(agent, `TinyFish ${event.browserProfile}: ${event.purpose}`);
-      return;
-    }
-
-    if (event.type === 'COMPLETE') {
-      stream.log(agent, `TinyFish ${event.browserProfile}: completed ${label}`);
-    }
-  };
 }
 
 app.use(cors());
@@ -146,36 +52,27 @@ app.get('/api/config', (_, res) => {
   res.json({
     spotifyClientId: process.env.SPOTIFY_CLIENT_ID || null,
     geminiConfigured,
+    mediaAnalysisProvider,
+    mediaAnalysisProviderLabel,
+    mediaAnalysisConfigured,
     spotifyConfigured,
     tinyFishConfigured,
     uploadLimitMb,
-    deploymentTarget: isVercelDeployment ? 'vercel' : 'local'
+    deploymentTarget: isVercelDeployment ? 'vercel' : 'local',
+    jobStoreMode: getJobStoreMode()
   });
 });
 
-// ─── Run collector (POST/JSON only for demo mode) ────────────────────────────
-function createRunCollector() {
-  const logs = [];
-  let progress = 0;
-
-  return {
-    log(agent, message) {
-      logs.push({ type: 'log', agent, message, ts: new Date().toISOString() });
-    },
-    progress(pct) {
-      progress = pct;
-    },
-    snapshot() {
-      return { logs, progress };
-    }
-  };
-}
-
-// ─── Main pipeline ───────────────────────────────────────────────────────────
+// ─── Background analysis job entrypoint ──────────────────────────────────────
 app.post('/api/analyse', upload.single('video'), async (req, res) => {
-  const stream = createRunCollector();
-
   try {
+    if (!isJobStoreReady()) {
+      return res.status(500).json({
+        ok: false,
+        error: 'Background job storage is not configured. Set BLOB_READ_WRITE_TOKEN on Vercel before using analysis jobs.'
+      });
+    }
+
     let profile;
     try {
       profile = typeof req.body.profile === 'string' ? JSON.parse(req.body.profile) : req.body;
@@ -183,165 +80,119 @@ app.post('/api/analyse', upload.single('video'), async (req, res) => {
       return res.status(400).json({ ok: false, error: 'Invalid profile JSON in request body.' });
     }
 
-    const {
-      artists = '',
-      genres = [],
-      chords = [],
-      guitar = 'acoustic',
-      extras = [],
-      gearNotes = '',
-      spotify = {}
-    } = profile;
-
-    const spotifyTopArtists = normaliseArray(spotify.topArtists).slice(0, 12);
-    const spotifyTopTracks = normaliseArray(spotify.topTracks).slice(0, 12);
-    const videoBuffer = req.file?.buffer || null;
-    const preferredArtists = buildPreferredArtists({ artists, spotifyTopArtists });
-    const tasteSummary = [...preferredArtists.slice(0, 5), ...normaliseArray(genres).slice(0, 2)]
-      .filter(Boolean)
-      .join(', ');
-
-    stream.log('orchestrator', 'HonestGuitar agent runtime started');
-    stream.log('orchestrator', `Profile: chords=[${normaliseArray(chords).join(', ')}] gear=[${guitar}, ${normaliseArray(extras).join(', ')}]`);
-    stream.log('orchestrator', `Music taste: "${tasteSummary || 'not provided'}"`);
-
-    if (spotifyTopArtists.length) {
-      stream.log('orchestrator', `Spotify import: ${spotifyTopArtists.slice(0, 5).join(', ')}`);
-    }
-
-    stream.progress(5);
-
-    // ── Step 1: Gemini media analysis ───────────────────────────────────────
-    let videoFeedback = null;
-    if (videoBuffer) {
-      stream.log('video-analyser', `Video received (${(videoBuffer.byteLength / 1024 / 1024).toFixed(1)} MB) — preparing Gemini analysis`);
-      stream.log('video-analyser', 'Uploading video + extracted audio to Gemini for strumming, timing, and buzz analysis');
-      stream.progress(15);
-
-      try {
-        videoFeedback = await analyseVideo(videoBuffer, req.file.mimetype, normaliseArray(chords), {
-          guitar,
-          extras: normaliseArray(extras),
-          gearNotes,
-          artistContext: tasteSummary
-        });
-        stream.log('video-analyser', `✓ Strumming pattern: ${videoFeedback.strummingPattern}`);
-        stream.log('video-analyser', `✓ Timing consistency: ${videoFeedback.timingScore ?? 'n/a'}/10`);
-        stream.log('video-analyser', `✓ Buzz risk: ${videoFeedback.buzzRisk}`);
-        stream.log('video-analyser', `✓ Sound quality note: ${videoFeedback.soundNote}`);
-      } catch (error) {
-        stream.log('video-analyser', `⚠ Media analysis failed: ${error.message} — continuing without it`);
-      }
-    } else {
-      stream.log('orchestrator', 'No video provided — skipping Gemini media analysis, using profile + taste data only');
-      stream.progress(20);
-    }
-
-    // ── Step 2: Parallel web scraping via TinyFish ──────────────────────────
-    stream.log('orchestrator', 'Spawning 3 TinyFish web agents in parallel');
-
-    const artistQueries = preferredArtists.slice(0, 1);
-    const fallbackQuery = normaliseArray(genres)[0] || 'popular beginner songs';
-    const songQueries = artistQueries.length ? artistQueries : [fallbackQuery];
-
-    const [tabData, forumData, gearData] = await Promise.allSettled([
-      (async () => {
-        stream.log('tab-scraper', '→ Navigating ultimate-guitar.com — bypassing bot challenge');
-        stream.log('tab-scraper', '→ Lightweight mode: Ultimate Guitar only, one artist/query');
-        if (artistQueries.length) {
-          stream.log('tab-scraper', `→ Prioritising preferred artists: ${artistQueries.join(', ')}`);
-        }
-        const results = await Promise.allSettled(songQueries.map(query => scrapeTabsAndChords(
-          query,
-          normaliseArray(chords),
-          { onEvent: createTinyFishLogBridge(stream, 'tab-scraper', `tab search for ${query}`) }
-        )));
-        const fulfilled = results.filter(result => result.status === 'fulfilled').map(result => result.value);
-        const merged = mergeTabResults(fulfilled, preferredArtists);
-        stream.log('tab-scraper', `✓ ${merged.songs.length} candidate songs extracted, artist-prioritised and chord-filtered`);
-        return merged;
-      })(),
-
-      (async () => {
-        stream.log('forum-miner', '→ Navigating r/guitarlessons — mining beginner difficulty threads');
-        stream.log('forum-miner', '→ Lightweight mode: r/guitarlessons only, one artist/query');
-        const forumTargets = songQueries.slice(0, 1);
-        const results = await Promise.allSettled(forumTargets.map(query => scrapeSongForums(
-          query,
-          normaliseArray(chords),
-          { onEvent: createTinyFishLogBridge(stream, 'forum-miner', `forum search for ${query}`) }
-        )));
-        const fulfilled = results.filter(result => result.status === 'fulfilled').map(result => result.value);
-        const merged = mergeForumResults(fulfilled);
-        stream.log('forum-miner', `✓ Difficulty intel collected from ${merged.sourceCount} forum threads`);
-        return merged;
-      })(),
-
-      (async () => {
-        stream.log('gear-intel', `→ Profile: "${guitar}, ${normaliseArray(extras).join(', ')}" — querying budget guitar communities`);
-        stream.log('gear-intel', '→ Lightweight mode: r/acousticguitar only');
-        const result = await scrapeGearForums(
-          guitar,
-          normaliseArray(extras),
-          gearNotes,
-          { onEvent: createTinyFishLogBridge(stream, 'gear-intel', `gear search for ${guitar}`) }
-        );
-        stream.log('gear-intel', `✓ Gear intel consolidated for ${guitar} setup`);
-        return result;
-      })()
-    ]);
-
-    stream.progress(72);
-
-    const tabs = tabData.status === 'fulfilled' ? tabData.value : { songs: [], raw: '' };
-    const forums = forumData.status === 'fulfilled' ? forumData.value : { tips: [], sourceCount: 0 };
-    const gear = gearData.status === 'fulfilled' ? gearData.value : { tips: [], upgrades: [] };
-
-    // ── Step 3: Synthesis ────────────────────────────────────────────────────
-    stream.log('synthesiser', `Merging scraped data with ${videoFeedback ? 'Gemini media analysis + ' : ''}taste profile`);
-    stream.log('synthesiser', 'Calling OpenAI to generate personalised roadmap');
-    stream.progress(82);
-
-    const roadmap = await synthesiseRoadmap({
-      profile: {
-        artists,
-        genres: normaliseArray(genres),
-        chords: normaliseArray(chords),
-        guitar,
-        extras: normaliseArray(extras),
-        gearNotes,
-        spotify: {
-          topArtists: spotifyTopArtists,
-          topTracks: spotifyTopTracks
-        },
-        preferredArtists
-      },
-      videoFeedback,
-      tabs,
-      forums,
-      gear
+    const job = await createJob({
+      profile,
+      video: req.file ? {
+        buffer: req.file.buffer,
+        mimeType: req.file.mimetype,
+        name: req.file.originalname
+      } : null
     });
 
-    roadmap.mediaAnalysis = videoFeedback;
-    roadmap.spotifyTaste = {
-      topArtists: spotifyTopArtists,
-      topTracks: spotifyTopTracks
-    };
+    const backgroundTask = runAnalysisJob(job.id).catch(error => {
+      console.error(`Background analysis job ${job.id} failed:`, error);
+    });
 
-    stream.progress(100);
-    stream.log('synthesiser', `✓ Roadmap ready — ${roadmap.songs.length} songs, ${roadmap.nextChords.length} new chords to learn`);
-    return res.json({
+    if (isVercelDeployment) {
+      waitUntil(backgroundTask);
+    } else {
+      backgroundTask.catch(() => {});
+    }
+
+    return res.status(202).json({
       ok: true,
-      data: roadmap,
-      ...stream.snapshot()
+      jobId: job.id,
+      status: job.status
     });
   } catch (err) {
-    console.error('Pipeline error:', err);
+    console.error('Create job error:', err);
     return res.status(500).json({
       ok: false,
-      error: err.message || 'Unexpected server error',
-      ...stream.snapshot()
+      error: err.message || 'Unexpected server error'
     });
+  }
+});
+
+app.get('/api/analyse/:jobId', async (req, res) => {
+  const job = await readJob(req.params.jobId);
+  if (!job) {
+    return res.status(404).json({
+      ok: false,
+      error: 'Analysis job not found'
+    });
+  }
+
+  return res.json({
+    ok: true,
+    ...toClientJob(job)
+  });
+});
+
+app.get('/api/analyse/:jobId/events', async (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders?.();
+  res.write('retry: 1500\n\n');
+
+  let closed = false;
+  let lastSnapshot = '';
+  let intervalId = null;
+
+  const closeStream = () => {
+    if (closed) return;
+    closed = true;
+    if (intervalId) clearInterval(intervalId);
+    res.end();
+  };
+
+  req.on('close', closeStream);
+
+  const pushUpdate = async () => {
+    if (closed) return;
+
+    const job = await readJob(req.params.jobId);
+    if (!job) {
+      res.write(`event: error\ndata: ${JSON.stringify({ ok: false, error: 'Analysis job not found' })}\n\n`);
+      closeStream();
+      return;
+    }
+
+    const payload = {
+      ok: true,
+      ...toClientJob(job)
+    };
+    const snapshot = JSON.stringify({
+      status: payload.status,
+      progress: payload.progress,
+      logCount: payload.logs?.length || 0,
+      error: payload.error,
+      updatedAt: payload.updatedAt
+    });
+
+    if (snapshot !== lastSnapshot) {
+      lastSnapshot = snapshot;
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    }
+
+    if (payload.status === 'succeeded' || payload.status === 'failed') {
+      closeStream();
+    }
+  };
+
+  try {
+    await pushUpdate();
+    intervalId = setInterval(() => {
+      pushUpdate().catch(error => {
+        if (closed) return;
+        res.write(`event: error\ndata: ${JSON.stringify({ ok: false, error: error.message || 'Event stream failed' })}\n\n`);
+        closeStream();
+      });
+    }, 1000);
+  } catch (error) {
+    res.write(`event: error\ndata: ${JSON.stringify({ ok: false, error: error.message || 'Event stream failed' })}\n\n`);
+    closeStream();
   }
 });
 
@@ -397,6 +248,8 @@ if (!isVercelDeployment) {
     console.log(`\n🎸 HonestGuitar server running at http://localhost:${PORT}`);
     console.log(`   Deployment:   local`);
     console.log(`   Upload limit: ${uploadLimitMb}MB`);
+    console.log(`   Job store:    ${getJobStoreMode()}`);
+    console.log(`   Media AI:     ${mediaAnalysisProviderLabel} (${mediaAnalysisProvider}) ${mediaAnalysisConfigured ? '✓ ready' : '✗ not configured'}`);
     console.log(`   TinyFish key:  ${tinyFishConfigured ? '✓ set' : '✗ missing (set TINYFISH_API_KEY or TINY_FISH_API_KEY)'}`);
     console.log(`   OpenAI key:    ${process.env.OPENAI_API_KEY ? '✓ set' : '✗ missing (set OPENAI_API_KEY)'}`);
     console.log(`   Gemini key:    ${geminiConfigured ? '✓ set' : '✗ missing (set GEMINI_API_KEY)'}`);

@@ -1,12 +1,13 @@
 /**
- * HonestGuitar — Gemini performance analyser
+ * HonestGuitar — media performance analyser
  *
- * Extracts visual frames from the user's clip and sends those frames to Gemini
- * for posture/strumming analysis, while a separate audio track is analysed for
- * buzz, timing, and tone.
+ * Extracts visual frames from the user's clip and routes them through the
+ * configured multimodal provider for posture/strumming analysis, while a
+ * separate audio track is analysed for buzz, timing, and tone.
  */
 
 import { GoogleGenAI, createPartFromUri, createUserContent } from '@google/genai';
+import OpenAI from 'openai';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegPath from 'ffmpeg-static';
 import ffprobeStatic from 'ffprobe-static';
@@ -16,6 +17,8 @@ import { mkdir, readFile, rm, writeFile } from 'fs/promises';
 import { randomBytes } from 'crypto';
 
 const GEMINI_MEDIA_MODEL = 'gemini-3-flash-preview';
+const OPENAI_VISION_MODEL = process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini';
+const OPENAI_AUDIO_MODEL = process.env.OPENAI_AUDIO_MODEL || 'gpt-audio-mini';
 
 if (ffmpegPath) {
   ffmpeg.setFfmpegPath(ffmpegPath);
@@ -118,6 +121,26 @@ function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('GEMINI_API_KEY not set');
   return new GoogleGenAI({ apiKey });
+}
+
+function getOpenAIClient() {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY not set');
+  return new OpenAI({ apiKey });
+}
+
+export function getMediaAnalysisProvider() {
+  return process.env.MEDIA_ANALYSIS_PROVIDER === 'openai' ? 'openai' : 'gemini';
+}
+
+export function getMediaAnalysisProviderLabel() {
+  return getMediaAnalysisProvider() === 'openai' ? 'OpenAI' : 'Gemini';
+}
+
+export function isMediaAnalysisConfigured() {
+  return getMediaAnalysisProvider() === 'openai'
+    ? Boolean(process.env.OPENAI_API_KEY)
+    : Boolean(process.env.GEMINI_API_KEY);
 }
 
 function safeAverage(...values) {
@@ -349,13 +372,159 @@ function buildEmptyVideoResult() {
   };
 }
 
+function buildEmptyAudioResult(overallAssessment = 'Audio analysis did not yield enough usable evidence.') {
+  return {
+    soundQualitySummary: '',
+    soundScore: null,
+    buzzRisk: 'unknown',
+    buzzNotes: '',
+    rhythmNotes: '',
+    dynamicsNotes: '',
+    toneNotes: '',
+    noiseIssues: [],
+    audioPositives: [],
+    topAudioFixes: [],
+    overallAssessment
+  };
+}
+
+function getCompletionText(completion) {
+  const content = completion?.choices?.[0]?.message?.content;
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content.map(item => item?.text || '').filter(Boolean).join('\n');
+  }
+  return '';
+}
+
+function parseJsonPayload(raw) {
+  const text = String(raw || '').trim();
+  if (!text) throw new Error('Provider returned an empty response');
+
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const candidate = fenced?.[1]?.trim() || text;
+
+  try {
+    return JSON.parse(candidate);
+  } catch {}
+
+  const start = candidate.indexOf('{');
+  const end = candidate.lastIndexOf('}');
+  if (start !== -1 && end !== -1 && end > start) {
+    return JSON.parse(candidate.slice(start, end + 1));
+  }
+
+  throw new Error(`Could not parse JSON from provider response: ${candidate.slice(0, 200)}`);
+}
+
+function buildCombinedMediaAnalysisResult({ analysisEngine, videoResult, audioResult, previewFrames, audioPreviewUrl }) {
+  const topImprovements = uniqueStrings(videoResult.topImprovements, audioResult.topAudioFixes).slice(0, 4);
+  const positives = uniqueStrings(videoResult.positives, audioResult.audioPositives).slice(0, 4);
+  const overallAssessment = [
+    videoResult.overallAssessment,
+    audioResult.overallAssessment
+  ].filter(Boolean).join(' ');
+
+  return {
+    analysisEngine,
+    strummingPattern: videoResult.strummingPattern || audioResult.rhythmNotes || 'Pattern unclear from clip',
+    strummingScore: videoResult.strummingScore ?? null,
+    timingConsistency: videoResult.timingConsistency || audioResult.rhythmNotes || 'Timing unclear from clip',
+    timingScore: safeAverage(videoResult.timingScore, audioResult.soundScore),
+    chordShapesObserved: videoResult.chordShapesObserved || [],
+    handPositionNotes: videoResult.handPositionNotes || '',
+    strumHandNotes: videoResult.strumHandNotes || '',
+    transitionFeedback: videoResult.transitionFeedback || '',
+    postureSummary: videoResult.postureSummary || '',
+    visualCorrections: videoResult.visualCorrections || [],
+    frameFeedback: (videoResult.frameFeedback || [])
+      .map(item => ({
+        frameIndex: Math.max(1, Math.min(previewFrames.length || 1, Math.round(Number(item.frameIndex) || 1))),
+        focusArea: item.focusArea || 'Technique cue',
+        wrong: item.wrong || '',
+        correct: item.correct || ''
+      }))
+      .filter(item => item.wrong || item.correct),
+    previewFrames: previewFrames.map(frame => frame.dataUrl),
+    audioPreviewUrl,
+    soundNote: audioResult.soundQualitySummary || audioResult.toneNotes || '',
+    soundScore: audioResult.soundScore ?? null,
+    buzzRisk: audioResult.buzzRisk || 'unknown',
+    buzzNotes: audioResult.buzzNotes || '',
+    rhythmNotes: audioResult.rhythmNotes || '',
+    dynamicsNotes: audioResult.dynamicsNotes || '',
+    toneNotes: audioResult.toneNotes || '',
+    noiseIssues: audioResult.noiseIssues || [],
+    topImprovements,
+    positives,
+    overallAssessment,
+    rawVideoAnalysis: videoResult,
+    rawAudioAnalysis: audioResult
+  };
+}
+
 async function deleteUploadedFile(ai, uploadedFile) {
   if (!uploadedFile?.name) return;
   await ai.files.delete({ name: uploadedFile.name }).catch(() => {});
 }
 
-// ─── Main performance analysis function ─────────────────────────────────────
-export async function analyseVideo(videoBuffer, mimeType = 'video/mp4', knownChords = [], context = {}) {
+async function analyseFrameSetWithOpenAI(client, frameSet, prompt) {
+  const completion = await client.chat.completions.create({
+    model: OPENAI_VISION_MODEL,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content: 'You are an expert beginner guitar coach. Return only valid JSON matching the requested schema.'
+      },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: `${prompt}\nReturn only JSON.` },
+          ...frameSet.map(frame => ({
+            type: 'image_url',
+            image_url: {
+              url: frame.dataUrl,
+              detail: 'low'
+            }
+          }))
+        ]
+      }
+    ]
+  });
+
+  return parseJsonPayload(getCompletionText(completion));
+}
+
+async function analyseAudioWithOpenAI(client, audioPath, prompt) {
+  const audioBase64 = (await readFile(audioPath)).toString('base64');
+  const completion = await client.chat.completions.create({
+    model: OPENAI_AUDIO_MODEL,
+    messages: [
+      {
+        role: 'system',
+        content: 'You are an expert beginner guitar coach analysing practice-clip audio. Return only valid JSON matching the requested schema.'
+      },
+      {
+        role: 'user',
+        content: [
+          { type: 'text', text: `${prompt}\nReturn only JSON.` },
+          {
+            type: 'input_audio',
+            input_audio: {
+              data: audioBase64,
+              format: 'mp3'
+            }
+          }
+        ]
+      }
+    ]
+  });
+
+  return parseJsonPayload(getCompletionText(completion));
+}
+
+async function analyseVideoWithGemini(videoBuffer, mimeType, knownChords, context) {
   const ai = getGeminiClient();
   const temp = await createTempMediaFiles(videoBuffer, mimeType);
   let uploadedAudio = null;
@@ -379,49 +548,13 @@ export async function analyseVideo(videoBuffer, mimeType = 'video/mp4', knownCho
       analyseUploadedFile(ai, uploadedAudio, buildAudioPrompt(knownChords, context), AUDIO_SCHEMA)
     ]);
 
-    const topImprovements = uniqueStrings(videoResult.topImprovements, audioResult.topAudioFixes).slice(0, 4);
-    const positives = uniqueStrings(videoResult.positives, audioResult.audioPositives).slice(0, 4);
-    const overallAssessment = [
-      videoResult.overallAssessment,
-      audioResult.overallAssessment
-    ].filter(Boolean).join(' ');
-
-    return {
+    return buildCombinedMediaAnalysisResult({
       analysisEngine: 'Gemini 3 Flash',
-      strummingPattern: videoResult.strummingPattern || audioResult.rhythmNotes || 'Pattern unclear from clip',
-      strummingScore: videoResult.strummingScore ?? null,
-      timingConsistency: videoResult.timingConsistency || audioResult.rhythmNotes || 'Timing unclear from clip',
-      timingScore: safeAverage(videoResult.timingScore, audioResult.soundScore),
-      chordShapesObserved: videoResult.chordShapesObserved || [],
-      handPositionNotes: videoResult.handPositionNotes || '',
-      strumHandNotes: videoResult.strumHandNotes || '',
-      transitionFeedback: videoResult.transitionFeedback || '',
-      postureSummary: videoResult.postureSummary || '',
-      visualCorrections: videoResult.visualCorrections || [],
-      frameFeedback: (videoResult.frameFeedback || [])
-        .map(item => ({
-          frameIndex: Math.max(1, Math.min(previewFrames.length || 1, Math.round(Number(item.frameIndex) || 1))),
-          focusArea: item.focusArea || 'Technique cue',
-          wrong: item.wrong || '',
-          correct: item.correct || ''
-        }))
-        .filter(item => item.wrong || item.correct),
-      previewFrames: previewFrames.map(frame => frame.dataUrl),
-      audioPreviewUrl,
-      soundNote: audioResult.soundQualitySummary || audioResult.toneNotes || '',
-      soundScore: audioResult.soundScore ?? null,
-      buzzRisk: audioResult.buzzRisk || 'unknown',
-      buzzNotes: audioResult.buzzNotes || '',
-      rhythmNotes: audioResult.rhythmNotes || '',
-      dynamicsNotes: audioResult.dynamicsNotes || '',
-      toneNotes: audioResult.toneNotes || '',
-      noiseIssues: audioResult.noiseIssues || [],
-      topImprovements,
-      positives,
-      overallAssessment,
-      rawVideoAnalysis: videoResult,
-      rawAudioAnalysis: audioResult
-    };
+      videoResult,
+      audioResult,
+      previewFrames,
+      audioPreviewUrl
+    });
   } catch (error) {
     throw new Error(`Gemini media analysis failed: ${error.message}`);
   } finally {
@@ -430,4 +563,61 @@ export async function analyseVideo(videoBuffer, mimeType = 'video/mp4', knownCho
       rm(temp.dir, { recursive: true, force: true })
     ]);
   }
+}
+
+async function analyseVideoWithOpenAI(videoBuffer, mimeType, knownChords, context) {
+  const client = getOpenAIClient();
+  const temp = await createTempMediaFiles(videoBuffer, mimeType);
+  let previewFrames = [];
+
+  try {
+    await extractAudioTrack(temp.videoPath, temp.audioPath);
+    try {
+      previewFrames = await extractPreviewFrames(temp.videoPath, temp.framePattern);
+    } catch {
+      previewFrames = [];
+    }
+
+    const audioPreviewBuffer = await readFile(temp.audioPath);
+    const audioPreviewUrl = `data:audio/mpeg;base64,${audioPreviewBuffer.toString('base64')}`;
+
+    const [videoResultStatus, audioResultStatus] = await Promise.allSettled([
+      previewFrames.length
+        ? analyseFrameSetWithOpenAI(client, previewFrames, buildVideoPrompt(knownChords, context, previewFrames.length))
+        : Promise.resolve(buildEmptyVideoResult()),
+      analyseAudioWithOpenAI(client, temp.audioPath, buildAudioPrompt(knownChords, context))
+    ]);
+
+    if (videoResultStatus.status === 'rejected' && audioResultStatus.status === 'rejected') {
+      throw new Error(`visual analysis failed: ${videoResultStatus.reason?.message || videoResultStatus.reason}; audio analysis failed: ${audioResultStatus.reason?.message || audioResultStatus.reason}`);
+    }
+
+    const videoResult = videoResultStatus.status === 'fulfilled'
+      ? videoResultStatus.value
+      : buildEmptyVideoResult();
+    const audioResult = audioResultStatus.status === 'fulfilled'
+      ? audioResultStatus.value
+      : buildEmptyAudioResult(`Audio analysis temporarily unavailable: ${audioResultStatus.reason?.message || audioResultStatus.reason || 'provider error'}`);
+
+    return buildCombinedMediaAnalysisResult({
+      analysisEngine: `OpenAI ${OPENAI_VISION_MODEL} + ${OPENAI_AUDIO_MODEL}`,
+      videoResult,
+      audioResult,
+      previewFrames,
+      audioPreviewUrl
+    });
+  } catch (error) {
+    throw new Error(`OpenAI media analysis failed: ${error.message}`);
+  } finally {
+    await rm(temp.dir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+// ─── Main performance analysis function ─────────────────────────────────────
+export async function analyseVideo(videoBuffer, mimeType = 'video/mp4', knownChords = [], context = {}) {
+  if (getMediaAnalysisProvider() === 'openai') {
+    return await analyseVideoWithOpenAI(videoBuffer, mimeType, knownChords, context);
+  }
+
+  return await analyseVideoWithGemini(videoBuffer, mimeType, knownChords, context);
 }

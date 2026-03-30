@@ -80,8 +80,14 @@ npm start
 # .env
 TINYFISH_API_KEY=your_tinyfish_key_here
 OPENAI_API_KEY=your_openai_key_here
+MEDIA_ANALYSIS_PROVIDER=gemini
+OPENAI_VISION_MODEL=gpt-4o-mini
+OPENAI_AUDIO_MODEL=gpt-audio-mini
 GEMINI_API_KEY=your_gemini_key_here
 SPOTIFY_CLIENT_ID=your_spotify_client_id_here
+BLOB_READ_WRITE_TOKEN=your_vercel_blob_read_write_token
+BLOB_ACCESS_MODE=public
+USE_BLOB_STORE_LOCALLY=0
 PORT=3001
 ```
 

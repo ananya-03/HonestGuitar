@@ -1,5 +1,6 @@
 .env
 node_modules/
 .DS_Store
+.job-data/
 sample_video.mov
 sample1.mov
