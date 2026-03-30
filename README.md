@@ -84,6 +84,7 @@ MEDIA_ANALYSIS_PROVIDER=gemini
 OPENAI_VISION_MODEL=gpt-4o-mini
 OPENAI_AUDIO_MODEL=gpt-audio-mini
 GEMINI_API_KEY=your_gemini_key_here
+GEMINI_MEDIA_MODEL=gemini-2.5-flash
 SPOTIFY_CLIENT_ID=your_spotify_client_id_here
 BLOB_READ_WRITE_TOKEN=your_vercel_blob_read_write_token
 BLOB_ACCESS_MODE=public

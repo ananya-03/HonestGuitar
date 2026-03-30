@@ -19,7 +19,7 @@ import { fileURLToPath } from 'url';
 import { scrapeSongForums, scrapeGearForums } from './webAgent.js';
 import { synthesiseSongTips } from './synthesiser.js';
 import { runAnalysisJob } from './analysisJob.js';
-import { createJob, getJobStoreMode, isJobStoreReady, readJob, toClientJob } from './jobStore.js';
+import { createEmptyAgents, createJob, getJobStoreMode, isJobStoreReady, readJob, toClientJob } from './jobStore.js';
 import { getMediaAnalysisProvider, getMediaAnalysisProviderLabel, isMediaAnalysisConfigured } from './videoAnalyser.js';
 
 const ROOT_DIR = dirname(fileURLToPath(import.meta.url));
@@ -38,6 +38,30 @@ const mediaAnalysisConfigured = isMediaAnalysisConfigured();
 
 function normaliseArray(value) {
   return Array.isArray(value) ? value.filter(Boolean).map(item => String(item).trim()).filter(Boolean) : [];
+}
+
+function buildPendingJobPayload(jobId) {
+  return {
+    ok: true,
+    id: jobId,
+    status: 'queued',
+    progress: 0,
+    createdAt: null,
+    updatedAt: new Date().toISOString(),
+    startedAt: null,
+    completedAt: null,
+    error: null,
+    logs: [
+      {
+        type: 'log',
+        agent: 'orchestrator',
+        message: 'Job accepted by backend. Waiting for storage sync...',
+        ts: new Date().toISOString()
+      }
+    ],
+    agents: createEmptyAgents(false),
+    data: null
+  };
 }
 
 app.use(cors());
@@ -116,10 +140,7 @@ app.post('/api/analyse', upload.single('video'), async (req, res) => {
 app.get('/api/analyse/:jobId', async (req, res) => {
   const job = await readJob(req.params.jobId);
   if (!job) {
-    return res.status(404).json({
-      ok: false,
-      error: 'Analysis job not found'
-    });
+    return res.status(202).json(buildPendingJobPayload(req.params.jobId));
   }
 
   return res.json({
@@ -154,8 +175,7 @@ app.get('/api/analyse/:jobId/events', async (req, res) => {
 
     const job = await readJob(req.params.jobId);
     if (!job) {
-      res.write(`event: error\ndata: ${JSON.stringify({ ok: false, error: 'Analysis job not found' })}\n\n`);
-      closeStream();
+      res.write(`data: ${JSON.stringify(buildPendingJobPayload(req.params.jobId))}\n\n`);
       return;
     }
 

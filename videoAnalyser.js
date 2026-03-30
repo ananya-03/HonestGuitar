@@ -16,7 +16,7 @@ import { join } from 'path';
 import { mkdir, readFile, rm, writeFile } from 'fs/promises';
 import { randomBytes } from 'crypto';
 
-const GEMINI_MEDIA_MODEL = 'gemini-3-flash-preview';
+const GEMINI_MEDIA_MODEL = process.env.GEMINI_MEDIA_MODEL || 'gemini-2.5-flash';
 const OPENAI_VISION_MODEL = process.env.OPENAI_VISION_MODEL || 'gpt-4o-mini';
 const OPENAI_AUDIO_MODEL = process.env.OPENAI_AUDIO_MODEL || 'gpt-audio-mini';
 
