@@ -733,6 +733,7 @@ const state = {
   localPreviewFrames: [],
   localPreviewPromise: null,
   uploadedMediaUrl: null,
+  uploadedMediaSource: null,
   agentDemoTimers: [],
   currentJobId: null,
   jobLogCount: 0
@@ -746,20 +747,56 @@ function showScreen(id) {
 }
 function setProgress(p) { document.getElementById('progress-fill').style.width = p+'%'; }
 
+function scheduleObjectUrlRevoke(url, delayMs = 2000) {
+  if (!url) return;
+  window.setTimeout(() => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {}
+  }, delayMs);
+}
+
+function clearFeedbackVideoElements() {
+  document.querySelectorAll('#video-feedback-panel video').forEach(video => {
+    try {
+      video.pause();
+      video.removeAttribute('src');
+      video.querySelectorAll('source').forEach(source => source.removeAttribute('src'));
+      video.load();
+    } catch {}
+  });
+}
+
 function revokeUploadedMediaUrl() {
-  if (state.uploadedMediaUrl) {
-    URL.revokeObjectURL(state.uploadedMediaUrl);
-    state.uploadedMediaUrl = null;
+  const existingUrl = state.uploadedMediaUrl;
+  state.uploadedMediaUrl = null;
+  state.uploadedMediaSource = null;
+  if (existingUrl) {
+    scheduleObjectUrlRevoke(existingUrl);
   }
 }
 
 function getUploadedMediaUrl() {
   const source = state.videoBlob || state.videoFile;
   if (!source) return null;
-  if (!state.uploadedMediaUrl) {
+
+  if (state.uploadedMediaSource !== source) {
+    const previousUrl = state.uploadedMediaUrl;
+    state.uploadedMediaSource = source;
     state.uploadedMediaUrl = URL.createObjectURL(source);
+    if (previousUrl) {
+      scheduleObjectUrlRevoke(previousUrl);
+    }
   }
+
   return state.uploadedMediaUrl;
+}
+
+function canPreviewLocalVideo(mimeType) {
+  if (!mimeType) return true;
+  const probe = document.createElement('video');
+  const supportLevel = typeof probe.canPlayType === 'function' ? probe.canPlayType(mimeType) : '';
+  return Boolean(supportLevel && supportLevel !== 'no');
 }
 
 function openDraftDatabase() {
@@ -1147,9 +1184,24 @@ function getConfiguredUploadLimitMb() {
   return Math.max(1, Number(state.config?.uploadLimitMb || 100));
 }
 
+function getReliableUploadLimitMb() {
+  const configuredLimit = getConfiguredUploadLimitMb();
+  if (state.config?.deploymentTarget !== 'vercel') return configuredLimit;
+  return Math.max(1, Math.min(configuredLimit, configuredLimit - 0.5));
+}
+
 function formatUploadLimitHint() {
   const limitMb = getConfiguredUploadLimitMb();
   return Number.isInteger(limitMb) ? String(limitMb) : limitMb.toFixed(1);
+}
+
+function formatReliableUploadLimitHint() {
+  const limitMb = getReliableUploadLimitMb();
+  return Number.isInteger(limitMb) ? String(limitMb) : limitMb.toFixed(1);
+}
+
+function getRecommendedRecordingSeconds() {
+  return state.config?.deploymentTarget === 'vercel' ? 18 : 30;
 }
 
 function getMediaAnalysisLabel() {
@@ -1161,12 +1213,16 @@ function updateVideoInputHints() {
   const recordHint = document.getElementById('record-hint');
   const sectionSub = document.getElementById('video-section-sub');
   const limitHint = formatUploadLimitHint();
+  const reliableLimitHint = formatReliableUploadLimitHint();
+  const recommendedRecordingSeconds = getRecommendedRecordingSeconds();
   const deploymentHint = state.config?.deploymentTarget === 'vercel'
-    ? `Keep the clip under ${limitHint}MB on this deployment.`
+    ? `Keep the clip under ${reliableLimitHint}MB on this deployment for reliable uploads.`
     : `Keep the clip under ${limitHint}MB.`;
 
   if (uploadSub) {
-    uploadSub.textContent = `MP4, MOV, WebM · max ${limitHint}MB`;
+    uploadSub.textContent = state.config?.deploymentTarget === 'vercel'
+      ? `MP4, MOV, WebM · keep under ${reliableLimitHint}MB`
+      : `MP4, MOV, WebM · max ${limitHint}MB`;
   }
 
   if (sectionSub) {
@@ -1174,7 +1230,7 @@ function updateVideoInputHints() {
   }
 
   if (recordHint) {
-    recordHint.innerHTML = `Record 15–30 seconds of you strumming — any chord or song you're trying.<br/>${getMediaAnalysisLabel()} will analyse your technique, rhythm, buzz risk, and sound quality. ${deploymentHint}`;
+    recordHint.innerHTML = `Record 10–${recommendedRecordingSeconds} seconds of you strumming — any chord or song you're trying.<br/>${getMediaAnalysisLabel()} will analyse your technique, rhythm, buzz risk, and sound quality. ${deploymentHint}`;
   }
 }
 
@@ -1192,10 +1248,13 @@ function validateVideoSize(fileOrBlob, label = 'Video') {
   if (!fileOrBlob) return true;
 
   const sizeMb = getVideoSizeMb(fileOrBlob);
-  const limitMb = getConfiguredUploadLimitMb();
+  const limitMb = getReliableUploadLimitMb();
   if (sizeMb <= limitMb) return true;
 
-  showInputError(`${label} is ${sizeMb.toFixed(1)}MB. This deployment accepts clips up to ${formatUploadLimitHint()}MB. Record a shorter clip or upload a smaller file.`);
+  const message = state.config?.deploymentTarget === 'vercel'
+    ? `${label} is ${sizeMb.toFixed(1)}MB. Keep clips under ${formatReliableUploadLimitHint()}MB on this deployment to avoid interrupted uploads. Record a shorter clip or upload a smaller file.`
+    : `${label} is ${sizeMb.toFixed(1)}MB. This deployment accepts clips up to ${formatUploadLimitHint()}MB. Record a shorter clip or upload a smaller file.`;
+  showInputError(message);
   return false;
 }
 
@@ -1481,10 +1540,18 @@ function switchVideoTab(tab) {
 }
 
 // ─── CAMERA / RECORD ─────────────────────────────────────────────────────────
-let mediaStream = null, mediaRecorder = null, recordedChunks = [];
+let mediaStream = null, mediaRecorder = null, recordedChunks = [], recordStopTimer = null;
+
+function clearRecordStopTimer() {
+  if (recordStopTimer) {
+    window.clearTimeout(recordStopTimer);
+    recordStopTimer = null;
+  }
+}
 
 async function toggleCamera() {
   if (mediaStream) {
+    clearRecordStopTimer();
     mediaStream.getTracks().forEach(t => t.stop());
     mediaStream = null;
     document.getElementById('preview-video').classList.remove('visible');
@@ -1515,6 +1582,7 @@ function toggleRecord() {
   mediaRecorder = new MediaRecorder(mediaStream, recordingOptions);
   mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
   mediaRecorder.onstop = () => {
+    clearRecordStopTimer();
     state.videoFile = null;
     state.videoBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || recordingOptions.mimeType || 'video/mp4' });
     document.getElementById('record-btn').innerHTML = '● Record';
@@ -1531,18 +1599,33 @@ function toggleRecord() {
     queueLocalPreviewFrames();
   };
   mediaRecorder.start();
+  clearRecordStopTimer();
+  recordStopTimer = window.setTimeout(() => {
+    if (mediaRecorder && mediaRecorder.state === 'recording') {
+      mediaRecorder.stop();
+    }
+  }, getRecommendedRecordingSeconds() * 1000);
   document.getElementById('record-btn').innerHTML = '⏸ Recording...';
   document.getElementById('record-btn').style.background = 'var(--red)';
   document.getElementById('stop-btn').style.display = 'flex';
 }
 
-function stopRecord() { if (mediaRecorder) mediaRecorder.stop(); }
+function stopRecord() {
+  clearRecordStopTimer();
+  if (mediaRecorder) mediaRecorder.stop();
+}
 
 function getRecordingOptions() {
-  const baseOptions = {
-    videoBitsPerSecond: 650_000,
-    audioBitsPerSecond: 96_000
-  };
+  const isTightDeployment = state.config?.deploymentTarget === 'vercel';
+  const baseOptions = isTightDeployment
+    ? {
+        videoBitsPerSecond: 360_000,
+        audioBitsPerSecond: 48_000
+      }
+    : {
+        videoBitsPerSecond: 650_000,
+        audioBitsPerSecond: 96_000
+      };
   const mimeTypes = [
     'video/mp4;codecs=h264,aac',
     'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
@@ -1583,6 +1666,7 @@ function showVideoReady(text) {
 }
 
 function clearVideo() {
+  clearFeedbackVideoElements();
   revokeUploadedMediaUrl();
   state.videoFile = null; state.videoBlob = null;
   state.localPreviewFrames = [];
@@ -1827,8 +1911,12 @@ async function runPipeline() {
     const response = await fetch(`${backendBase}/api/analyse`, { method: 'POST', body: form });
     const payload = await response.json().catch(() => ({}));
 
+    if (response.status === 408) {
+      throw new Error(payload.error || `Upload interrupted before the server received the full clip. Keep the video under ${formatReliableUploadLimitHint()}MB and try again.`);
+    }
+
     if (response.status === 413) {
-      throw new Error(payload.error || `Video upload exceeded the ${formatUploadLimitHint()}MB deployment limit. Use a shorter clip or upload a smaller file.`);
+      throw new Error(payload.error || `Video upload exceeded the ${formatReliableUploadLimitHint()}MB deployment limit. Use a shorter clip or upload a smaller file.`);
     }
 
     if (!response.ok || payload.ok === false) {
@@ -1840,9 +1928,15 @@ async function runPipeline() {
     document.getElementById('agent-subtitle').textContent = 'Job accepted. Connecting to live backend stream...';
     await streamAnalysisJob(payload.jobId);
   } catch(e) {
+    const isUploadInterruption = Boolean(videoSource) && (
+      /408|aborted|interrupted|timed out|networkerror|load failed|failed to fetch/i.test(String(e?.message || ''))
+    );
+    const message = isUploadInterruption
+      ? `Upload failed before the backend received the full clip. Keep the video under ${formatReliableUploadLimitHint()}MB on this deployment and try again.`
+      : `Backend error: ${e.message}`;
     clearAgentDemoTimers();
     document.getElementById('agent-error').style.display = 'block';
-    document.getElementById('agent-error').textContent = `Backend error: ${e.message}`;
+    document.getElementById('agent-error').textContent = message;
   }
 }
 
@@ -1863,6 +1957,7 @@ function renderResults() {
   const uploadedMediaUrl = getUploadedMediaUrl();
   const feedbackAudioUrl = media?.audioPreviewUrl || null;
   const uploadedMediaType = state.videoBlob?.type || state.videoFile?.type || 'video/mp4';
+  const canInlinePreviewUploadedMedia = Boolean(uploadedMediaUrl && canPreviewLocalVideo(uploadedMediaType));
   const hasFeedbackMedia = Boolean(uploadedMediaUrl || previewFrames.length || media);
   const rawFrameFeedback = (media?.frameFeedback || []).length
     ? media.frameFeedback
@@ -1905,12 +2000,10 @@ function renderResults() {
       { label: 'Dynamics', value: media?.dynamicsNotes || 'No dynamics note available' },
       { label: 'Tone', value: media?.toneNotes || 'No tone note available' }
     ].filter(item => item.value && item.value.trim());
-    const feedbackVideoHtml = uploadedMediaUrl ? `
+    const feedbackVideoHtml = canInlinePreviewUploadedMedia ? `
         <div class="feedback-video-wrap">
         <div class="feedback-video-player">
-          <video controls playsinline preload="metadata" loop poster="${previewFrames[0] || ''}">
-            <source src="${uploadedMediaUrl}" type="${uploadedMediaType}"/>
-          </video>
+          <video controls playsinline preload="metadata" loop poster="${previewFrames[0] || ''}" src="${uploadedMediaUrl}"></video>
           <div class="feedback-video-badge">Uploaded feedback clip</div>
         </div>
         <div class="feedback-video-side">
@@ -1929,6 +2022,8 @@ function renderResults() {
           </div>
         </div>
       </div>
+    ` : uploadedMediaUrl ? `
+      <div class="vf-tip"><strong>Local video preview unavailable in this browser:</strong> HonestGuitar still analysed the uploaded clip, but this browser cannot reliably play back the local ${uploadedMediaType || 'video'} blob. Use the extracted frames and audio notes below instead.</div>
     ` : '';
     const noFrameNoteHtml = media && !previewFrames.length
       ? `<div class="vf-tip"><strong>Frame preview unavailable:</strong> the clip was analysed, but HonestGuitar could not extract displayable posture frames from this upload.</div>`
@@ -2164,6 +2259,7 @@ function renderResults() {
 function resetApp() {
   clearAgentDemoTimers();
   stopFrameLoop();
+  clearFeedbackVideoElements();
   revokeUploadedMediaUrl();
   state.currentJobId = null;
   state.jobLogCount = 0;

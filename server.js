@@ -251,7 +251,22 @@ app.use((err, _req, res, next) => {
   return next(err);
 });
 
-app.use((err, _req, res, next) => {
+app.use((err, req, res, next) => {
+  const uploadInterrupted = req?.aborted
+    || req?.destroyed
+    || err?.message === 'Request aborted'
+    || err?.code === 'ECONNRESET'
+    || err?.type === 'request.aborted';
+
+  if (uploadInterrupted) {
+    console.warn('Upload interrupted before multipart parsing completed.');
+    if (res.headersSent || req?.aborted || res.destroyed) return;
+    return res.status(408).json({
+      ok: false,
+      error: 'Upload interrupted before the server received the full video. Keep the clip shorter and try again.'
+    });
+  }
+
   if (res.headersSent) return next(err);
   console.error('Unhandled express error:', err);
   return res.status(err?.status || 500).json({
