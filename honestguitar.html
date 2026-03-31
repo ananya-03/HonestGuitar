@@ -827,7 +827,7 @@ function getCurrentVideoMode() {
 
 function collectRedirectDraft() {
   const videoSource = getCurrentVideoSource();
-  const videoType = videoSource?.type || 'video/webm';
+  const videoType = videoSource?.type || 'video/mp4';
 
   return {
     artists: document.getElementById('artists-input').value.trim(),
@@ -923,7 +923,7 @@ function applyRedirectDraft(draft) {
   if (draft.video?.blob) {
     if (draft.video.sourceKind === 'file') {
       state.videoFile = new File([draft.video.blob], draft.video.name || 'upload.webm', {
-        type: draft.video.type || 'video/webm',
+        type: draft.video.type || 'video/mp4',
         lastModified: draft.video.lastModified || Date.now()
       });
     } else {
@@ -1516,7 +1516,7 @@ function toggleRecord() {
   mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
   mediaRecorder.onstop = () => {
     state.videoFile = null;
-    state.videoBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || recordingOptions.mimeType || 'video/webm' });
+    state.videoBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || recordingOptions.mimeType || 'video/mp4' });
     document.getElementById('record-btn').innerHTML = '● Record';
     document.getElementById('record-btn').style.background = 'var(--accent)';
     document.getElementById('stop-btn').style.display = 'none';
@@ -1544,6 +1544,9 @@ function getRecordingOptions() {
     audioBitsPerSecond: 96_000
   };
   const mimeTypes = [
+    'video/mp4;codecs=h264,aac',
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4',
     'video/webm;codecs=vp9,opus',
     'video/webm;codecs=vp8,opus',
     'video/webm'
@@ -1813,7 +1816,7 @@ async function runPipeline() {
 
   const videoSource = state.videoBlob || state.videoFile;
   if (videoSource) {
-    const mimeType = state.videoBlob ? 'video/webm' : (state.videoFile?.type || 'video/mp4');
+    const mimeType = videoSource.type || 'video/mp4';
     form.append('video', videoSource, 'recording.' + mimeType.split('/')[1]);
     setCard('video', 'active', 'analysing');
   }
@@ -1858,7 +1861,8 @@ function renderResults() {
   const analysisEngineLabel = media?.analysisEngine || 'AI clip analysis';
   const previewFrames = (media?.previewFrames || []).length ? media.previewFrames : state.localPreviewFrames;
   const uploadedMediaUrl = getUploadedMediaUrl();
-  const feedbackAudioUrl = media?.audioPreviewUrl || uploadedMediaUrl;
+  const feedbackAudioUrl = media?.audioPreviewUrl || null;
+  const uploadedMediaType = state.videoBlob?.type || state.videoFile?.type || 'video/mp4';
   const hasFeedbackMedia = Boolean(uploadedMediaUrl || previewFrames.length || media);
   const rawFrameFeedback = (media?.frameFeedback || []).length
     ? media.frameFeedback
@@ -1905,7 +1909,7 @@ function renderResults() {
         <div class="feedback-video-wrap">
         <div class="feedback-video-player">
           <video controls playsinline preload="metadata" loop poster="${previewFrames[0] || ''}">
-            <source src="${uploadedMediaUrl}" type="${state.videoBlob ? 'video/webm' : (state.videoFile?.type || 'video/mp4')}"/>
+            <source src="${uploadedMediaUrl}" type="${uploadedMediaType}"/>
           </video>
           <div class="feedback-video-badge">Uploaded feedback clip</div>
         </div>
